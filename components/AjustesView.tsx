@@ -28,11 +28,13 @@ import { StoreSettings, WorkingDayHours } from '../types';
 interface AjustesViewProps {
   settings: StoreSettings;
   onSaveSettings: (newSettings: StoreSettings) => void;
+  readOnly?: boolean;
 }
 
 export const AjustesView: React.FC<AjustesViewProps> = ({
   settings,
   onSaveSettings,
+  readOnly = false,
 }) => {
   const [activeTab, setActiveTab] = useState<'perfil' | 'horarios' | 'meta'>('perfil');
 
@@ -227,6 +229,7 @@ fbq('track', 'PageView');
       {/* Tab 1: Perfil da Loja */}
       {activeTab === 'perfil' && (
         <form onSubmit={handleSave} className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs space-y-6">
+        <fieldset disabled={readOnly} className="contents">
           {/* Seção Logotipo da Loja para o Hot Site */}
           <div className="bg-gradient-to-br from-slate-50 to-slate-100/70 p-5 rounded-2xl border border-slate-200/90 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/80 pb-3">
@@ -531,6 +534,7 @@ fbq('track', 'PageView');
               Salvar Dados do Perfil
             </button>
           </div>
+        </fieldset>
         </form>
       )}
 
