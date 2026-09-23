@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Menu, 
-  X, 
-  Car, 
-  Bell, 
-  Search, 
-  Plus, 
+import React, { useState } from 'react';
+import {
+  Menu,
+  X,
+  Car,
+  Bell,
+  Search,
+  Plus,
   ChevronRight,
   ExternalLink,
   ShieldAlert,
@@ -19,158 +19,92 @@ import { KanbanView } from './components/KanbanView';
 import { HotSiteView } from './components/HotSiteView';
 import { EquipeView } from './components/EquipeView';
 import { AjustesView } from './components/AjustesView';
-import { 
-  NavSection, 
-  Vehicle, 
-  Lead, 
-  TeamMember, 
-  StoreSettings, 
-  LeadStage 
+import { LoginView } from './components/LoginView';
+import {
+  NavSection,
+  Vehicle,
+  Lead,
+  TeamMember,
+  StoreSettings,
+  LeadStage
 } from './types';
-import { 
-  INITIAL_VEHICLES, 
-  INITIAL_LEADS, 
-  INITIAL_TEAM, 
-  INITIAL_SETTINGS 
-} from './data/mockData';
+import { useAuth } from './contexts/AuthContext';
+import type { Profile } from './contexts/AuthContext';
+import { canEditStoreSettings, canDeleteTeamMember } from './lib/permissions';
+import { useVehicles } from './hooks/useVehicles';
+import { useLeads } from './hooks/useLeads';
+import { useTeam } from './hooks/useTeam';
+import { useStoreSettings } from './hooks/useStoreSettings';
 
-export const App: React.FC = () => {
+const LoadingScreen: React.FC = () => (
+  <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500 text-sm">
+    Carregando...
+  </div>
+);
+
+const AuthenticatedApp: React.FC<{ profile: Profile }> = ({ profile }) => {
+  const { signOut } = useAuth();
   const [activeSection, setActiveSection] = useState<NavSection>('inicio');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
-  // Persistent States
-  const [vehicles, setVehicles] = useState<Vehicle[]>(() => {
-    const saved = localStorage.getItem('autocrm_vehicles');
-    return saved ? JSON.parse(saved) : INITIAL_VEHICLES;
-  });
+  const { vehicles, loading: vehiclesLoading, addVehicle, updateVehicle, deleteVehicle } =
+    useVehicles(profile.storeId);
+  const { leads, loading: leadsLoading, addLead, updateLead, deleteLead, updateLeadStage } =
+    useLeads(profile.storeId);
+  const { team, loading: teamLoading, addMember, updateMember, deleteMember } =
+    useTeam(profile.storeId);
+  const { settings, loading: settingsLoading, saveSettings } = useStoreSettings(profile.storeId);
 
-  const [leads, setLeads] = useState<Lead[]>(() => {
-    const saved = localStorage.getItem('autocrm_leads');
-    if (saved) {
-      try {
-        const parsed: Lead[] = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map(l => {
-            if (!l.dateIso) {
-              const defaultIso = l.createdAt?.includes('Hoje') ? '2026-09-21T09:00:00' :
-                l.createdAt?.includes('Ontem') ? '2026-09-20T16:00:00' :
-                l.createdAt?.includes('19/09') ? '2026-09-19T14:00:00' :
-                l.createdAt?.includes('14/09') ? '2026-09-14T11:00:00' :
-                l.createdAt?.includes('10/09') ? '2026-09-10T15:00:00' :
-                new Date().toISOString();
-              return { ...l, dateIso: defaultIso };
-            }
-            return l;
-          });
-        }
-      } catch {
-        return INITIAL_LEADS;
-      }
-    }
-    return INITIAL_LEADS;
-  });
+  if (vehiclesLoading || leadsLoading || teamLoading || settingsLoading || !settings) {
+    return <LoadingScreen />;
+  }
 
-  const [team, setTeam] = useState<TeamMember[]>(() => {
-    const saved = localStorage.getItem('autocrm_team');
-    return saved ? JSON.parse(saved) : INITIAL_TEAM;
-  });
-
-  const [settings, setSettings] = useState<StoreSettings>(() => {
-    const saved = localStorage.getItem('autocrm_settings');
-    return saved ? JSON.parse(saved) : INITIAL_SETTINGS;
-  });
-
-  // Save to LocalStorage on changes
-  useEffect(() => {
-    localStorage.setItem('autocrm_vehicles', JSON.stringify(vehicles));
-  }, [vehicles]);
-
-  useEffect(() => {
-    localStorage.setItem('autocrm_leads', JSON.stringify(leads));
-  }, [leads]);
-
-  useEffect(() => {
-    localStorage.setItem('autocrm_team', JSON.stringify(team));
-  }, [team]);
-
-  useEffect(() => {
-    localStorage.setItem('autocrm_settings', JSON.stringify(settings));
-  }, [settings]);
-
-  // Vehicle Handlers
   const handleAddVehicle = (newVehicle: Omit<Vehicle, 'id' | 'createdAt'>) => {
-    const created: Vehicle = {
-      ...newVehicle,
-      id: `car-${Date.now()}`,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-    setVehicles(prev => [created, ...prev]);
+    addVehicle(newVehicle);
   };
 
   const handleUpdateVehicle = (updatedVehicle: Vehicle) => {
-    setVehicles(prev => prev.map(v => v.id === updatedVehicle.id ? updatedVehicle : v));
+    updateVehicle(updatedVehicle);
   };
 
   const handleDeleteVehicle = (id: string) => {
-    setVehicles(prev => prev.filter(v => v.id !== id));
+    deleteVehicle(id);
   };
 
-  // Lead Handlers
   const handleAddLead = (newLead: Omit<Lead, 'id' | 'createdAt' | 'lastContactAt'>) => {
-    const now = new Date();
-    const formattedTime = `Hoje às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-    const created: Lead = {
-      ...newLead,
-      id: `lead-${Date.now()}`,
-      createdAt: formattedTime,
-      lastContactAt: formattedTime,
-      dateIso: now.toISOString(),
-    };
-    setLeads(prev => [created, ...prev]);
+    addLead(newLead);
   };
 
   const handleUpdateLead = (updatedLead: Lead) => {
-    setLeads(prev => prev.map(l => l.id === updatedLead.id ? updatedLead : l));
+    updateLead(updatedLead);
   };
 
   const handleDeleteLead = (id: string) => {
-    setLeads(prev => prev.filter(l => l.id !== id));
+    deleteLead(id);
   };
 
   const handleUpdateLeadStage = (leadId: string, newStage: LeadStage) => {
-    setLeads(prev => prev.map(l => {
-      if (l.id === leadId) {
-        return {
-          ...l,
-          stage: newStage,
-          lastContactAt: `Hoje às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
-        };
-      }
-      return l;
-    }));
+    updateLeadStage(leadId, newStage);
   };
 
-  // Team Handlers
-  const handleAddTeamMember = (newMember: Omit<TeamMember, 'id' | 'joinedDate'>, _password?: string) => {
-    const created: TeamMember = {
-      ...newMember,
-      id: `team-${Date.now()}`,
-      joinedDate: 'Hoje',
-    };
-    setTeam(prev => [...prev, created]);
+  const handleAddTeamMember = async (newMember: Omit<TeamMember, 'id' | 'joinedDate'>) => {
+    try {
+      await addMember(newMember);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erro ao convidar usuário.');
+    }
   };
 
   const handleUpdateTeamMember = (updatedMember: TeamMember) => {
-    setTeam(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m));
+    updateMember(updatedMember);
   };
 
   const handleDeleteTeamMember = (id: string) => {
-    setTeam(prev => prev.filter(m => m.id !== id));
+    deleteMember(id);
   };
 
-  // Settings Handler
   const handleSaveSettings = (newSettings: StoreSettings) => {
-    setSettings(newSettings);
+    saveSettings(newSettings);
   };
 
   const sectionTitles: { [key in NavSection]: { title: string; subtitle: string } } = {
@@ -216,6 +150,9 @@ export const App: React.FC = () => {
         storeName={settings.storeName}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
+        role={profile.role}
+        userName={profile.name}
+        onSignOut={signOut}
       />
 
       {/* Main Content Area */}
@@ -250,7 +187,7 @@ export const App: React.FC = () => {
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Notification Badge */}
             <div className="relative">
-              <button 
+              <button
                 id="notifications-btn"
                 className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors relative"
                 title="Notificações de novos leads"
@@ -366,6 +303,7 @@ export const App: React.FC = () => {
               onAddMember={handleAddTeamMember}
               onUpdateMember={handleUpdateTeamMember}
               onDeleteMember={handleDeleteTeamMember}
+              canDelete={canDeleteTeamMember(profile.role)}
             />
           )}
 
@@ -373,12 +311,27 @@ export const App: React.FC = () => {
             <AjustesView
               settings={settings}
               onSaveSettings={handleSaveSettings}
+              readOnly={!canEditStoreSettings(profile.role)}
             />
           )}
         </main>
       </div>
     </div>
   );
+};
+
+export const App: React.FC = () => {
+  const { profile, loading } = useAuth();
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  if (!profile) {
+    return <LoginView />;
+  }
+
+  return <AuthenticatedApp profile={profile} />;
 };
 
 export default App;
