@@ -1,0 +1,6 @@
+{
+  "name": "Auto Wise - CRM Automotivo & Hot Sites",
+  "description": "CRM automotivo inteligente com gestão de estoque, leads, pipeline kanban, gerador de landing pages Hot Site para cada carro e integração Meta Pixel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
