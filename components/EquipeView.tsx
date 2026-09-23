@@ -1,21 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  UserCheck, 
-  Plus, 
-  Search, 
-  ShieldCheck, 
-  Mail, 
-  Phone, 
-  Key, 
-  Eye, 
-  EyeOff, 
-  Award, 
-  TrendingUp, 
-  Edit3, 
-  Trash2, 
-  X, 
-  CheckCircle, 
-  UserPlus, 
+import {
+  UserCheck,
+  Plus,
+  Search,
+  ShieldCheck,
+  Mail,
+  Phone,
+  Key,
+  Award,
+  TrendingUp,
+  Edit3,
+  Trash2,
+  X,
+  CheckCircle,
+  UserPlus,
   Lock,
   Sparkles,
   QrCode,
@@ -34,9 +32,10 @@ import { TeamMember } from '../types';
 
 interface EquipeViewProps {
   team: TeamMember[];
-  onAddMember: (member: Omit<TeamMember, 'id' | 'joinedDate'>, password?: string) => void;
+  onAddMember: (member: Omit<TeamMember, 'id' | 'joinedDate'>) => void;
   onUpdateMember: (member: TeamMember) => void;
   onDeleteMember: (id: string) => void;
+  canDelete: boolean;
 }
 
 export const EquipeView: React.FC<EquipeViewProps> = ({
@@ -44,6 +43,7 @@ export const EquipeView: React.FC<EquipeViewProps> = ({
   onAddMember,
   onUpdateMember,
   onDeleteMember,
+  canDelete,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('todos');
@@ -59,8 +59,6 @@ export const EquipeView: React.FC<EquipeViewProps> = ({
   const [role, setRole] = useState<'Administrador' | 'Gerente de Vendas' | 'Consultor de Vendas' | 'Atendimento / BDC'>('Consultor de Vendas');
   const [status, setStatus] = useState<'ativo' | 'inativo'>('ativo');
   const [targetSales, setTargetSales] = useState(10);
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
 
   // Colors for avatars
   const avatarColors = [
@@ -159,8 +157,6 @@ export const EquipeView: React.FC<EquipeViewProps> = ({
     setRole('Consultor de Vendas');
     setStatus('ativo');
     setTargetSales(10);
-    setPassword('Mudar@123');
-    setShowPassword(false);
     setIsModalOpen(true);
   };
 
@@ -172,8 +168,6 @@ export const EquipeView: React.FC<EquipeViewProps> = ({
     setRole(m.role);
     setStatus(m.status);
     setTargetSales(m.targetSales);
-    setPassword('');
-    setShowPassword(false);
     setIsModalOpen(true);
   };
 
@@ -204,7 +198,7 @@ export const EquipeView: React.FC<EquipeViewProps> = ({
         targetSales: Number(targetSales) || 10,
         avatarColor: randomColor,
         whatsappStatus: 'desconectado',
-      }, password);
+      });
     }
 
     setIsModalOpen(false);
@@ -439,15 +433,17 @@ export const EquipeView: React.FC<EquipeViewProps> = ({
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
-                  <button
-                    onClick={() => {
-                      if (confirm(`Remover o usuário ${member.name}?`)) onDeleteMember(member.id);
-                    }}
-                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Excluir Usuário"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {canDelete && (
+                    <button
+                      onClick={() => {
+                        if (confirm(`Remover o usuário ${member.name}?`)) onDeleteMember(member.id);
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Excluir Usuário"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -512,36 +508,17 @@ export const EquipeView: React.FC<EquipeViewProps> = ({
                 </span>
               </div>
 
-              {/* Password configuration */}
-              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
+              {!editingMember && (
+                <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center gap-1.5">
                     <Lock className="w-3.5 h-3.5 text-brand-600" />
-                    {editingMember ? 'Redefinir Senha (opcional)' : 'Senha Própria de Acesso *'}
+                    Acesso ao Sistema
+                  </label>
+                  <span className="text-[11px] text-slate-500 block">
+                    Um e-mail de convite será enviado para {email || 'o colaborador'} definir a própria senha de acesso.
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="text-[11px] text-brand-600 hover:underline flex items-center gap-1 lowercase"
-                  >
-                    {showPassword ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                    {showPassword ? 'Ocultar' : 'Mostrar'}
-                  </button>
-                </label>
-
-                <input
-                  id="user-password-input"
-                  type={showPassword ? 'text' : 'password'}
-                  required={!editingMember}
-                  placeholder={editingMember ? 'Deixe em branco para manter atual' : 'Defina a senha do colaborador'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-xl font-mono"
-                />
-                <span className="text-[11px] text-slate-500 mt-1 block">
-                  O colaborador poderá trocar esta senha no primeiro login
-                </span>
-              </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
