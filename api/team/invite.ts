@@ -60,7 +60,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email);
   if (inviteError || !invited.user) {
-    res.status(500).json({ error: inviteError?.message ?? 'Erro ao enviar convite' });
+    console.error('Erro ao enviar convite via Supabase Auth:', inviteError);
+    res.status(500).json({ error: 'Erro ao enviar convite. Tente novamente.' });
     return;
   }
 
@@ -76,7 +77,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   });
 
   if (profileError) {
-    res.status(500).json({ error: profileError.message });
+    console.error('Erro ao criar perfil do usuário convidado:', profileError);
+    await admin.auth.admin.deleteUser(invited.user.id);
+    res.status(500).json({ error: 'Erro ao criar perfil do usuário. Tente novamente.' });
     return;
   }
 
