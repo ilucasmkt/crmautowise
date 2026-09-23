@@ -1,19 +1,21 @@
 import React from 'react';
-import { 
-  LayoutDashboard, 
-  Car, 
-  Users, 
-  Kanban, 
-  UserCheck, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Car,
+  Users,
+  Kanban,
+  UserCheck,
+  Settings,
   ChevronRight,
   Flame,
   Store,
   Sparkles,
   ExternalLink,
-  Globe
+  Globe,
+  LogOut
 } from 'lucide-react';
-import { NavSection } from '../types';
+import { NavSection, TeamMember } from '../types';
+import { getVisibleSections } from '../lib/permissions';
 
 interface SidebarProps {
   activeSection: NavSection;
@@ -24,6 +26,9 @@ interface SidebarProps {
   storeName: string;
   isMobileOpen: boolean;
   onCloseMobile: () => void;
+  role: TeamMember['role'];
+  userName: string;
+  onSignOut: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -35,6 +40,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   storeName,
   isMobileOpen,
   onCloseMobile,
+  role,
+  userName,
+  onSignOut,
 }) => {
   const navItems: { id: NavSection; label: string; icon: React.ReactNode; badge?: string | number; badgeColor?: string }[] = [
     {
@@ -83,6 +91,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: <Settings className="w-5 h-5" />,
     },
   ];
+
+  const visibleSections = getVisibleSections(role);
+  const visibleNavItems = navItems.filter((item) => visibleSections.includes(item.id));
 
   return (
     <>
@@ -141,7 +152,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             Menu Principal
           </div>
 
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = activeSection === item.id;
             return (
               <button
@@ -210,22 +221,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="p-4 border-t border-slate-800 bg-slate-950/60">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-amber-500 to-amber-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
-              LM
+              {userName.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-white truncate">Lucas Martins</p>
-              <p className="text-[11px] text-slate-400 truncate">Gerente / Admin</p>
+              <p className="text-xs font-semibold text-white truncate">{userName}</p>
+              <p className="text-[11px] text-slate-400 truncate">{role}</p>
             </div>
-            <button 
-              id="user-settings-shortcut"
-              onClick={() => {
-                onSelectSection('ajustes');
-                onCloseMobile();
-              }}
-              title="Ajustes da conta"
-              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+            {visibleSections.includes('ajustes') && (
+              <button
+                id="user-settings-shortcut"
+                onClick={() => {
+                  onSelectSection('ajustes');
+                  onCloseMobile();
+                }}
+                title="Ajustes da conta"
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              id="sign-out-btn"
+              onClick={onSignOut}
+              title="Sair"
+              className="p-1.5 text-slate-400 hover:text-red-400 rounded-lg hover:bg-slate-800 transition-colors"
             >
-              <Settings className="w-4 h-4" />
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>
