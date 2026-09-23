@@ -128,7 +128,7 @@ leads (
   name text, phone text, email text,
   interested_vehicle text, vehicle_price numeric,
   source text, stage text, temperature text,
-  assigned_to uuid references profiles(id),
+  assigned_to text,
   notes text,
   created_at timestamptz default now(),
   last_contact_at timestamptz,
@@ -140,6 +140,19 @@ leads (
 `profiles.id` is the same UUID as the Supabase Auth user — logging in
 as that user and reading `profiles` gives you your own row directly
 via `auth.uid()`.
+
+`leads.assigned_to` stores the team member's **name** (text), not a
+foreign key. `LeadsView.tsx` already assigns leads via a `<select>`
+populated from the `team` list, storing `t.name` as the value, and
+`KanbanView.tsx` displays and filters by that same name string
+end-to-end. Switching this to a `profiles.id` FK would require
+rewriting the assignment dropdown, every display of the assignee, and
+the seller filter in both files for no functional gain here — so this
+design keeps `assigned_to` as a name, and Consultor-scoped RLS matches
+it against the caller's own `profiles.name` instead of `auth.uid()`.
+This assumes team member names are unique within a store, which is a
+reasonable constraint for a small dealership team (enforced nowhere
+today, and not worth adding for this pass).
 
 ### Row Level Security
 
@@ -157,7 +170,8 @@ insert/update/delete *other* profiles in their store — and only
 Administrador can delete.
 
 `leads`/`crm` add one more condition for `Consultor de Vendas`: they
-may only `SELECT`/`UPDATE` rows where `assigned_to = auth.uid()`.
+may only `SELECT`/`UPDATE` rows where
+`assigned_to = (select name from profiles where id = auth.uid())`.
 Administrador, Gerente de Vendas and Atendimento/BDC see all leads in
 their store.
 
@@ -199,14 +213,21 @@ password, and can log in immediately.
   permission matrix below; the "Equipe" and "Ajustes" sections are
   omitted from the sidebar entirely for roles that can't access them
   (in addition to RLS blocking the underlying data).
-- All `localStorage.getItem`/`setItem` calls across
-  `DashboardView`, `EstoqueView`, `LeadsView`, `KanbanView`,
-  `EquipeView`, `AjustesView` are replaced with Supabase queries
-  scoped implicitly by RLS (no manual `store_id` filtering needed in
-  most queries beyond what RLS already enforces, though `store_id` is
-  still included in inserts).
-- `EquipeView.tsx`'s "add member" action calls the new
-  `/api/team/invite` endpoint instead of writing to local state.
+- All `localStorage.getItem`/`setItem` calls live in `App.tsx` only —
+  the view components (`DashboardView`, `EstoqueView`, `LeadsView`,
+  `KanbanView`, `EquipeView`, `AjustesView`, `HotSiteView`) are purely
+  presentational and only receive data/handlers as props, so the
+  Supabase migration is concentrated in `App.tsx`: four new hooks
+  (`useVehicles`, `useLeads`, `useTeam`, `useStoreSettings`) replace
+  the `useState`/`useEffect(localStorage...)` pairs one-for-one,
+  keeping the same handler names/shapes the view components already
+  expect. Queries are scoped implicitly by RLS (no manual `store_id`
+  filtering needed for reads, though `store_id` is still set on
+  inserts).
+- `EquipeView.tsx`'s "add member" action (which already collects
+  name/email/role/password) calls the new `/api/team/invite` endpoint
+  instead of writing to local state; the password field is dropped
+  since Supabase's invite email lets the new member set their own.
 
 ### Permission matrix
 
