@@ -173,3 +173,33 @@ create policy leads_delete on leads for delete
     store_id = auth_store_id()
     and auth_role() in ('Administrador','Gerente de Vendas','Atendimento / BDC')
   );
+
+-- profiles: block a non-admin user from escalating their own privileges
+-- via profiles_update_self (that policy has no `with check`, so without
+-- this trigger a user could PATCH their own row's role/store_id/status/
+-- sales_count/leads_active/target_sales directly through the REST API).
+create or replace function prevent_profile_self_privilege_escalation()
+returns trigger
+language plpgsql
+security definer
+as $$
+begin
+  if auth.uid() = old.id and auth_role() not in ('Administrador', 'Gerente de Vendas') then
+    if new.role is distinct from old.role
+      or new.store_id is distinct from old.store_id
+      or new.status is distinct from old.status
+      or new.sales_count is distinct from old.sales_count
+      or new.leads_active is distinct from old.leads_active
+      or new.target_sales is distinct from old.target_sales
+    then
+      raise exception 'Not allowed to change privileged profile fields on your own account';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger profiles_prevent_self_escalation
+  before update on profiles
+  for each row
+  execute function prevent_profile_self_privilege_escalation();
