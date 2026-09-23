@@ -170,7 +170,8 @@ fbq('track', 'PageView');
         <button
           id="save-settings-top-btn"
           onClick={handleSave}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold shadow-md shadow-brand-600/25 transition-all hover:translate-y-[-1px]"
+          disabled={readOnly}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold shadow-md shadow-brand-600/25 transition-all hover:translate-y-[-1px]"
         >
           {savedSuccess ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
           <span>{savedSuccess ? 'Configurações Salvas!' : 'Salvar Alterações'}</span>
@@ -541,6 +542,7 @@ fbq('track', 'PageView');
       {/* Tab 2: Horário de Funcionamento */}
       {activeTab === 'horarios' && (
         <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs space-y-6">
+        <fieldset disabled={readOnly} className="contents">
           <div className="border-b border-slate-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <h2 className="text-base font-bold text-slate-900">Grade de Horários da Loja</h2>
@@ -617,12 +619,14 @@ fbq('track', 'PageView');
               Salvar Horários
             </button>
           </div>
+        </fieldset>
         </div>
       )}
 
       {/* Tab 3: Integração Meta Pixel */}
       {activeTab === 'meta' && (
         <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs space-y-6">
+        <fieldset disabled={readOnly} className="contents">
           <div className="border-b border-slate-100 pb-4">
             <div className="flex items-center gap-2">
               <span className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
@@ -758,6 +762,7 @@ fbq('track', 'PageView');
               Salvar Integração Meta Pixel
             </button>
           </div>
+        </fieldset>
         </div>
       )}
     </div>
