@@ -47,10 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     sendResponse = await fetch(`${evolutionUrl}/message/sendText/${instanceName}`, {
       method: 'POST',
       headers: { apikey: evolutionKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        number,
-        textMessage: { text },
-      }),
+      body: JSON.stringify({ number, text }),
     });
   } catch (err) {
     console.error('Erro ao contatar a Evolution API:', err);
