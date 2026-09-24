@@ -121,7 +121,7 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
 
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden grid grid-cols-1 md:grid-cols-[300px_1fr] h-[70vh]">
         {/* Chat list */}
-        <div className="border-r border-slate-200 overflow-y-auto">
+        <div className="border-r border-slate-200 overflow-y-auto h-full min-h-0">
           {chats.length === 0 ? (
             <div className="p-6 text-center text-xs text-slate-400">
               {chatsStatus === 'loading' ? 'Carregando conversas...' : 'Nenhuma conversa encontrada.'}
@@ -158,7 +158,7 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
         </div>
 
         {/* Thread */}
-        <div className="flex flex-col min-w-0">
+        <div className="flex flex-col min-w-0 h-full min-h-0">
           {!selectedChat ? (
             <div className="flex-1 flex items-center justify-center text-xs text-slate-400">
               Selecione uma conversa para ver as mensagens
@@ -179,7 +179,7 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-slate-50/50">
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2 bg-slate-50/50">
                 {messagesStatus === 'loading' ? (
                   <p className="text-xs text-slate-400 text-center">Carregando mensagens...</p>
                 ) : messagesStatus === 'error' ? (
