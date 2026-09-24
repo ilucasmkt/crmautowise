@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { extractBearerToken, authorizeTeamMemberAccess, AuthorizationError } from '../_shared/whatsapp';
+import { extractBearerToken, authorizeTeamMemberAccess, AuthorizationError } from '../_shared/whatsapp.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
