@@ -26,6 +26,8 @@ export interface Vehicle {
   mileage: number;
   price: number;
   fipePrice?: number;
+  fipeCode?: string;
+  fipeReferenceMonth?: string;
   fuel: 'Flex' | 'Gasolina' | 'Diesel' | 'Híbrido' | 'Elétrico';
   transmission: 'Automático' | 'Manual' | 'CVT';
   color: string;

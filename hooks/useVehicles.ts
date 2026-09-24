@@ -12,6 +12,8 @@ interface VehicleRow {
   mileage: number;
   price: number;
   fipe_price: number | null;
+  fipe_code: string | null;
+  fipe_reference_month: string | null;
   fuel: Vehicle['fuel'];
   transmission: Vehicle['transmission'];
   color: string;
@@ -34,6 +36,8 @@ function fromRow(row: VehicleRow): Vehicle {
     mileage: row.mileage,
     price: row.price,
     fipePrice: row.fipe_price ?? undefined,
+    fipeCode: row.fipe_code ?? undefined,
+    fipeReferenceMonth: row.fipe_reference_month ?? undefined,
     fuel: row.fuel,
     transmission: row.transmission,
     color: row.color,
@@ -77,6 +81,8 @@ export function useVehicles(storeId: string) {
           mileage: newVehicle.mileage,
           price: newVehicle.price,
           fipe_price: newVehicle.fipePrice ?? null,
+          fipe_code: newVehicle.fipeCode ?? null,
+          fipe_reference_month: newVehicle.fipeReferenceMonth ?? null,
           fuel: newVehicle.fuel,
           transmission: newVehicle.transmission,
           color: newVehicle.color,
@@ -105,6 +111,8 @@ export function useVehicles(storeId: string) {
         mileage: updated.mileage,
         price: updated.price,
         fipe_price: updated.fipePrice ?? null,
+        fipe_code: updated.fipeCode ?? null,
+        fipe_reference_month: updated.fipeReferenceMonth ?? null,
         fuel: updated.fuel,
         transmission: updated.transmission,
         color: updated.color,
