@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MessageSquare, Send, RefreshCw, User, AlertCircle, ImagePlus, FileAudio, Mic, Trash2, Check } from 'lucide-react';
+import { MessageSquare, Send, RefreshCw, User, AlertCircle, ImagePlus, Mic, Trash2, Check } from 'lucide-react';
 import {
   getWhatsAppChats,
   getWhatsAppMessages,
@@ -43,8 +43,13 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState('');
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const audioInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (container) container.scrollTop = container.scrollHeight;
+  }, [messages, selectedChat]);
 
   const [recording, setRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
@@ -266,12 +271,8 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
                 key={chat.remoteJid}
                 onClick={() => loadMessages(chat)}
                 className={`w-full text-left px-4 py-3 border-b border-slate-100 flex items-center gap-3 transition-colors ${
-                  selectedChat?.remoteJid === chat.remoteJid
-                    ? 'bg-brand-50'
-                    : !chat.lastMessageFromMe
-                    ? 'bg-amber-50/60 hover:bg-amber-50'
-                    : 'hover:bg-slate-50'
-                }`}
+                  !chat.lastMessageFromMe ? 'bg-amber-50/60 hover:bg-amber-50' : 'hover:bg-slate-50'
+                } ${selectedChat?.remoteJid === chat.remoteJid ? 'ring-2 ring-inset ring-brand-400' : ''}`}
               >
                 <div className="relative w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden shrink-0">
                   {chat.profilePicUrl ? (
@@ -325,7 +326,7 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
                 </div>
               </div>
 
-              <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2 bg-slate-50/50">
+              <div ref={messagesContainerRef} className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2 bg-slate-50/50">
                 {messagesStatus === 'loading' ? (
                   <p className="text-xs text-slate-400 text-center">Carregando mensagens...</p>
                 ) : messagesStatus === 'error' ? (
@@ -406,17 +407,6 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
                       e.target.value = '';
                     }}
                   />
-                  <input
-                    ref={audioInputRef}
-                    type="file"
-                    accept="audio/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleAttachFile(file, 'audio');
-                      e.target.value = '';
-                    }}
-                  />
                   <button
                     type="button"
                     disabled={sending}
@@ -425,15 +415,6 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
                     className="p-2.5 rounded-xl text-slate-500 hover:text-brand-600 hover:bg-brand-50 disabled:opacity-50 transition-colors shrink-0"
                   >
                     <ImagePlus className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    disabled={sending}
-                    onClick={() => audioInputRef.current?.click()}
-                    title="Anexar arquivo de áudio"
-                    className="p-2.5 rounded-xl text-slate-500 hover:text-brand-600 hover:bg-brand-50 disabled:opacity-50 transition-colors shrink-0"
-                  >
-                    <FileAudio className="w-4 h-4" />
                   </button>
                   <EmojiPicker onSelect={insertEmoji} />
                   <input
