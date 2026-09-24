@@ -18,6 +18,8 @@ interface ConversasViewProps {
   leads: Lead[];
   onAddLead: (lead: Omit<Lead, 'id' | 'createdAt' | 'lastContactAt'>) => void;
   onNavigateToLeads?: () => void;
+  initialPhone?: string | null;
+  onInitialPhoneHandled?: () => void;
 }
 
 function normalizePhone(phone: string): string {
@@ -51,10 +53,13 @@ export const ConversasView: React.FC<ConversasViewProps> = ({
   leads,
   onAddLead,
   onNavigateToLeads,
+  initialPhone,
+  onInitialPhoneHandled,
 }) => {
   const [chats, setChats] = useState<WhatsAppChat[]>([]);
   const [chatsStatus, setChatsStatus] = useState<'loading' | 'idle' | 'error'>('loading');
   const [chatsError, setChatsError] = useState('');
+  const [notFoundNotice, setNotFoundNotice] = useState('');
 
   const [selectedChat, setSelectedChat] = useState<WhatsAppChat | null>(null);
   const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
@@ -136,6 +141,19 @@ export const ConversasView: React.FC<ConversasViewProps> = ({
       setMessagesError(err instanceof Error ? err.message : 'Erro ao carregar as mensagens');
     }
   };
+
+  useEffect(() => {
+    if (!initialPhone || chatsStatus !== 'idle') return;
+    const match = chats.find((chat) => phonesMatch(chat.sendTo, initialPhone));
+    if (match) {
+      loadMessages(match);
+    } else {
+      setNotFoundNotice('Nenhuma conversa de WhatsApp encontrada para este número.');
+      setTimeout(() => setNotFoundNotice(''), 5000);
+    }
+    onInitialPhoneHandled?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPhone, chatsStatus]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -318,6 +336,13 @@ export const ConversasView: React.FC<ConversasViewProps> = ({
           <RefreshCw className={`w-4 h-4 ${chatsStatus === 'loading' ? 'animate-spin' : ''}`} />
         </button>
       </div>
+
+      {notFoundNotice && (
+        <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{notFoundNotice}</span>
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden grid grid-cols-1 md:grid-cols-[300px_1fr] h-[70vh]">
         {/* Chat list */}

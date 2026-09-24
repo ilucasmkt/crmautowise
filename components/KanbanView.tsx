@@ -17,7 +17,8 @@ import {
   RotateCcw,
   Sparkles,
   Archive,
-  Eye
+  Eye,
+  Edit3
 } from 'lucide-react';
 import { Lead, LeadStage, TeamMember } from '../types';
 import { formatCurrency } from '../lib/format';
@@ -28,6 +29,7 @@ interface KanbanViewProps {
   onUpdateLeadStage: (leadId: string, newStage: LeadStage) => void;
   onOpenNewLeadModal: (stage?: LeadStage) => void;
   onSelectLead: (lead: Lead) => void;
+  onOpenConversa: (phone: string) => void;
 }
 
 interface ColumnConfig {
@@ -45,6 +47,7 @@ export const KanbanView: React.FC<KanbanViewProps> = ({
   onUpdateLeadStage,
   onOpenNewLeadModal,
   onSelectLead,
+  onOpenConversa,
 }) => {
   const [selectedSeller, setSelectedSeller] = useState<string>('todos');
   const [viewMode, setViewMode] = useState<'funil' | 'ganhos' | 'perdidos'>('funil');
@@ -534,9 +537,6 @@ export const KanbanView: React.FC<KanbanViewProps> = ({
                       </div>
                     ) : (
                       colLeads.map((lead) => {
-                        const cleanPhone = lead.phone.replace(/\D/g, '');
-                        const whatsappUrl = `https://wa.me/55${cleanPhone}?text=Ol%C3%A1%20${encodeURIComponent(lead.name)},%20aqui%20%C3%A9%20${encodeURIComponent(lead.assignedTo)}%20da%20Auto%20Wise!%20Como%20est%C3%A1%20seu%20interesse%20no%20${encodeURIComponent(lead.interestedVehicle)}?`;
-
                         return (
                           <div
                             key={lead.id}
@@ -627,16 +627,25 @@ export const KanbanView: React.FC<KanbanViewProps> = ({
                                   <XCircle className="w-3.5 h-3.5" />
                                 </button>
 
-                                {/* WhatsApp Button */}
-                                <a
-                                  href={whatsappUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                                {/* Open conversation in Conversas */}
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenConversa(lead.phone)}
                                   className="p-1 text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
-                                  title="Chamar no WhatsApp"
+                                  title="Abrir conversa no CRM"
                                 >
                                   <MessageSquare className="w-3.5 h-3.5" />
-                                </a>
+                                </button>
+
+                                {/* Edit Lead */}
+                                <button
+                                  type="button"
+                                  onClick={() => onSelectLead(lead)}
+                                  className="p-1 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded transition-colors"
+                                  title="Editar Lead"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
 
                                 {/* Move Left */}
                                 <button

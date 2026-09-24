@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Users, 
   Plus, 
@@ -29,6 +29,8 @@ interface LeadsViewProps {
   onAddLead: (lead: Omit<Lead, 'id' | 'createdAt' | 'lastContactAt'>) => void;
   onUpdateLead: (lead: Lead) => void;
   onDeleteLead: (id: string) => void;
+  editLeadId?: string | null;
+  onEditLeadHandled?: () => void;
 }
 
 export const LeadsView: React.FC<LeadsViewProps> = ({
@@ -38,6 +40,8 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
   onAddLead,
   onUpdateLead,
   onDeleteLead,
+  editLeadId,
+  onEditLeadHandled,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sourceFilter, setSourceFilter] = useState<string>('todos');
@@ -89,6 +93,14 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
     setNotes(lead.notes);
     setIsModalOpen(true);
   };
+
+  useEffect(() => {
+    if (!editLeadId) return;
+    const lead = leads.find((l) => l.id === editLeadId);
+    if (lead) handleOpenEdit(lead);
+    onEditLeadHandled?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editLeadId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

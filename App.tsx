@@ -47,6 +47,8 @@ const AuthenticatedApp: React.FC<{ profile: Profile }> = ({ profile }) => {
   const { signOut } = useAuth();
   const [activeSection, setActiveSection] = useState<NavSection>('inicio');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [pendingEditLeadId, setPendingEditLeadId] = useState<string | null>(null);
+  const [pendingConversaPhone, setPendingConversaPhone] = useState<string | null>(null);
 
   const { vehicles, loading: vehiclesLoading, addVehicle, updateVehicle, deleteVehicle } =
     useVehicles(profile.storeId);
@@ -272,6 +274,8 @@ const AuthenticatedApp: React.FC<{ profile: Profile }> = ({ profile }) => {
               onAddLead={handleAddLead}
               onUpdateLead={handleUpdateLead}
               onDeleteLead={handleDeleteLead}
+              editLeadId={pendingEditLeadId}
+              onEditLeadHandled={() => setPendingEditLeadId(null)}
             />
           )}
 
@@ -287,7 +291,12 @@ const AuthenticatedApp: React.FC<{ profile: Profile }> = ({ profile }) => {
                   if (btn) btn.click();
                 }, 50);
               }}
+              onOpenConversa={(phone) => {
+                setPendingConversaPhone(phone);
+                setActiveSection('conversas');
+              }}
               onSelectLead={(lead) => {
+                setPendingEditLeadId(lead.id);
                 setActiveSection('leads');
               }}
             />
@@ -309,6 +318,8 @@ const AuthenticatedApp: React.FC<{ profile: Profile }> = ({ profile }) => {
               leads={leads}
               onAddLead={handleAddLead}
               onNavigateToLeads={() => setActiveSection('leads')}
+              initialPhone={pendingConversaPhone}
+              onInitialPhoneHandled={() => setPendingConversaPhone(null)}
             />
           )}
 
