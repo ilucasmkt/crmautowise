@@ -1,5 +1,6 @@
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import fipeHandler from './routes/fipe.js';
+import teamInviteHandler from './routes/teamInvite.js';
 import { asyncHandler } from './asyncHandler.js';
 
 export function createApp(): Express {
@@ -14,6 +15,8 @@ export function createApp(): Express {
     req.query.path = req.params[0];
     next();
   }, asyncHandler(fipeHandler));
+
+  app.post('/api/team/invite', asyncHandler(teamInviteHandler));
 
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ error: 'Não encontrado' });
