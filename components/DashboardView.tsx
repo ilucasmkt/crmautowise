@@ -29,6 +29,7 @@ import {
   toDateInputValue, 
   getNow 
 } from '../utils/dateUtils';
+import { formatCurrency } from '../lib/format';
 
 interface DashboardViewProps {
   leads: Lead[];
@@ -106,10 +107,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       return parseLeadDate(b).getTime() - parseLeadDate(a).getTime();
     }).slice(0, 6);
   }, [filteredLeads]);
-
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(val);
-  };
 
   // Quick preset actions for custom date picker
   const setQuickRange = (daysAgo: number) => {

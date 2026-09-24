@@ -20,6 +20,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Lead, LeadSource, LeadStage, LeadTemperature, Vehicle, TeamMember } from '../types';
+import { formatCurrency } from '../lib/format';
 
 interface LeadsViewProps {
   leads: Lead[];
@@ -134,10 +135,6 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
 
     return matchesSearch && matchesSource && matchesTemp && matchesStage;
   });
-
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(val);
-  };
 
   const stageLabels: { [key in LeadStage]: { label: string; color: string } } = {
     novo: { label: 'Novo Lead', color: 'bg-blue-100 text-blue-800' },

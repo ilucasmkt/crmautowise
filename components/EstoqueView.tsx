@@ -30,6 +30,8 @@ import {
 } from 'lucide-react';
 import { Vehicle } from '../types';
 import { FipeVehiclePicker, FipeFillResult } from './FipeVehiclePicker';
+import { CurrencyInput } from './CurrencyInput';
+import { formatCurrency } from '../lib/format';
 
 interface EstoqueViewProps {
   vehicles: Vehicle[];
@@ -267,10 +269,6 @@ export const EstoqueView: React.FC<EstoqueViewProps> = ({
   const totalStockValue = vehicles
     .filter(v => v.status !== 'vendido')
     .reduce((acc, curr) => acc + curr.price, 0);
-
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(val);
-  };
 
   const allBrands = Array.from(new Set(vehicles.map(v => v.brand)));
 
@@ -779,12 +777,11 @@ export const EstoqueView: React.FC<EstoqueViewProps> = ({
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
                     Preço de Venda (R$) *
                   </label>
-                  <input
+                  <CurrencyInput
                     id="car-price-input"
-                    type="number"
                     required
                     value={price}
-                    onChange={(e) => setPrice(Number(e.target.value))}
+                    onChange={setPrice}
                     className="w-full px-3 py-2 text-sm font-bold text-brand-700 bg-slate-50 border border-slate-200 rounded-xl"
                   />
                 </div>
@@ -792,10 +789,9 @@ export const EstoqueView: React.FC<EstoqueViewProps> = ({
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
                     Preço Tabela FIPE (R$)
                   </label>
-                  <input
-                    type="number"
+                  <CurrencyInput
                     value={fipePrice}
-                    onChange={(e) => setFipePrice(Number(e.target.value))}
+                    onChange={setFipePrice}
                     className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl"
                   />
                 </div>

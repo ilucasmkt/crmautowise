@@ -20,6 +20,7 @@ import {
   Eye
 } from 'lucide-react';
 import { Lead, LeadStage, TeamMember } from '../types';
+import { formatCurrency } from '../lib/format';
 
 interface KanbanViewProps {
   leads: Lead[];
@@ -155,10 +156,6 @@ export const KanbanView: React.FC<KanbanViewProps> = ({
     if (selectedSeller === 'todos') return true;
     return l.assignedTo === selectedSeller;
   });
-
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(val);
-  };
 
   // Drag and drop handlers
   const handleDragStart = (e: React.DragEvent, leadId: string) => {

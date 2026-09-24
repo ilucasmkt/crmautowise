@@ -38,6 +38,7 @@ import {
   Code
 } from 'lucide-react';
 import { Vehicle, Lead, StoreSettings, HotSiteIntent } from '../types';
+import { formatCurrency } from '../lib/format';
 
 interface HotSiteViewProps {
   vehicles: Vehicle[];
@@ -91,10 +92,6 @@ export const HotSiteView: React.FC<HotSiteViewProps> = ({
   const [utmContent, setUtmContent] = useState('video_reels_01');
 
   const selectedCar = vehicles.find(v => v.id === selectedCarId) || vehicles[0];
-
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(val);
-  };
 
   // Generate clean slug for the landing page
   const getCarSlug = (car: Vehicle) => {

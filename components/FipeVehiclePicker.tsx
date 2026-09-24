@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Search, PenLine, Loader2 } from 'lucide-react';
 import { FipeOption, parseFipePrice, mapFipeFuel, splitFipeModel } from '../lib/fipe';
 import { fetchFipeBrands, fetchFipeModels, fetchFipeYears, fetchFipeDetail } from '../lib/fipeClient';
+import { SearchableSelect } from './SearchableSelect';
 import { Vehicle } from '../types';
 
 export interface FipeFillResult {
@@ -145,41 +146,29 @@ export const FipeVehiclePicker: React.FC<FipeVehiclePickerProps> = ({ mode, onMo
       {mode === 'fipe' && (
         <div className="space-y-2">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <select
+            <SearchableSelect
               id="fipe-brand-select"
+              options={brands}
               value={brandCode}
-              onChange={(e) => handleBrandChange(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl"
-            >
-              <option value="">Marca...</option>
-              {brands.map((b) => (
-                <option key={b.code} value={b.code}>{b.name}</option>
-              ))}
-            </select>
-            <select
+              onChange={handleBrandChange}
+              placeholder="Marca..."
+            />
+            <SearchableSelect
               id="fipe-model-select"
+              options={models}
               value={modelCode}
-              onChange={(e) => handleModelChange(e.target.value)}
+              onChange={handleModelChange}
               disabled={!brandCode}
-              className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl disabled:bg-slate-100 disabled:text-slate-400"
-            >
-              <option value="">Modelo...</option>
-              {models.map((m) => (
-                <option key={m.code} value={m.code}>{m.name}</option>
-              ))}
-            </select>
-            <select
+              placeholder="Modelo..."
+            />
+            <SearchableSelect
               id="fipe-year-select"
+              options={years}
               value={yearCode}
-              onChange={(e) => handleYearChange(e.target.value)}
+              onChange={handleYearChange}
               disabled={!modelCode}
-              className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl disabled:bg-slate-100 disabled:text-slate-400"
-            >
-              <option value="">Ano...</option>
-              {years.map((y) => (
-                <option key={y.code} value={y.code}>{y.name}</option>
-              ))}
-            </select>
+              placeholder="Ano..."
+            />
           </div>
           {status === 'loading' && (
             <p className="text-[11px] text-slate-400 flex items-center gap-1">
