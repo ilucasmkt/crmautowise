@@ -496,9 +496,6 @@ export const HotSiteView: React.FC<HotSiteViewProps> = ({
                           <span className="px-3 py-1 rounded-full text-xs font-black bg-amber-500 text-slate-950 shadow-md flex items-center gap-1">
                             <Sparkles className="w-3.5 h-3.5" /> Oportunidade Única
                           </span>
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-white/90 backdrop-blur-xs text-slate-900 shadow-xs">
-                            Placa {selectedCar.plate}
-                          </span>
                         </div>
 
                         {/* Photo counter badge */}
@@ -821,9 +818,6 @@ export const HotSiteView: React.FC<HotSiteViewProps> = ({
                           <div className="absolute top-5 left-5 flex flex-wrap gap-2 z-10">
                             <span className="px-3.5 py-1.5 rounded-full text-xs font-black bg-amber-500 text-slate-950 shadow-md flex items-center gap-1.5">
                               <Sparkles className="w-4 h-4" /> Oferta Especial
-                            </span>
-                            <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-white/95 backdrop-blur-xs text-slate-900 shadow-sm">
-                              Placa {selectedCar.plate}
                             </span>
                           </div>
 
