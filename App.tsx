@@ -74,20 +74,36 @@ const AuthenticatedApp: React.FC<{ profile: Profile }> = ({ profile }) => {
     deleteVehicle(id);
   };
 
-  const handleAddLead = (newLead: Omit<Lead, 'id' | 'createdAt' | 'lastContactAt'>) => {
-    addLead(newLead);
+  const handleAddLead = async (newLead: Omit<Lead, 'id' | 'createdAt' | 'lastContactAt'>) => {
+    try {
+      await addLead(newLead);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erro ao criar lead.');
+    }
   };
 
-  const handleUpdateLead = (updatedLead: Lead) => {
-    updateLead(updatedLead);
+  const handleUpdateLead = async (updatedLead: Lead) => {
+    try {
+      await updateLead(updatedLead);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erro ao salvar lead.');
+    }
   };
 
-  const handleDeleteLead = (id: string) => {
-    deleteLead(id);
+  const handleDeleteLead = async (id: string) => {
+    try {
+      await deleteLead(id);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erro ao excluir lead.');
+    }
   };
 
-  const handleUpdateLeadStage = (leadId: string, newStage: LeadStage) => {
-    updateLeadStage(leadId, newStage);
+  const handleUpdateLeadStage = async (leadId: string, newStage: LeadStage) => {
+    try {
+      await updateLeadStage(leadId, newStage);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erro ao mover lead.');
+    }
   };
 
   const handleAddTeamMember = async (newMember: Omit<TeamMember, 'id' | 'joinedDate'>) => {

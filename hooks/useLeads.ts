@@ -86,7 +86,7 @@ export function useLeads(storeId: string) {
   );
 
   const updateLead = useCallback(async (updated: Lead) => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('leads')
       .update({
         name: updated.name,
@@ -102,26 +102,49 @@ export function useLeads(storeId: string) {
         last_contact_at: updated.lastContactAt,
         value: updated.value ?? null,
       })
-      .eq('id', updated.id);
-    if (!error) setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+      .eq('id', updated.id)
+      .select();
+    if (error) {
+      console.error('Erro ao atualizar lead:', error);
+      throw new Error('Não foi possível salvar as alterações do lead.');
+    }
+    // RLS can silently match zero rows (no error) if the caller isn't allowed
+    // to update this lead, instead of rejecting the request outright.
+    if (!data || data.length === 0) {
+      throw new Error('Você não tem permissão para editar este lead.');
+    }
+    setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
   }, []);
 
   const deleteLead = useCallback(async (id: string) => {
-    const { error } = await supabase.from('leads').delete().eq('id', id);
-    if (!error) setLeads((prev) => prev.filter((l) => l.id !== id));
+    const { data, error } = await supabase.from('leads').delete().eq('id', id).select();
+    if (error) {
+      console.error('Erro ao excluir lead:', error);
+      throw new Error('Não foi possível excluir o lead.');
+    }
+    if (!data || data.length === 0) {
+      throw new Error('Você não tem permissão para excluir este lead.');
+    }
+    setLeads((prev) => prev.filter((l) => l.id !== id));
   }, []);
 
   const updateLeadStage = useCallback(async (leadId: string, newStage: LeadStage) => {
     const lastContactAt = new Date().toISOString();
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('leads')
       .update({ stage: newStage, last_contact_at: lastContactAt })
-      .eq('id', leadId);
-    if (!error) {
-      setLeads((prev) =>
-        prev.map((l) => (l.id === leadId ? { ...l, stage: newStage, lastContactAt } : l))
-      );
+      .eq('id', leadId)
+      .select();
+    if (error) {
+      console.error('Erro ao mover lead de etapa:', error);
+      throw new Error('Não foi possível mover o lead de etapa.');
     }
+    if (!data || data.length === 0) {
+      throw new Error('Você não tem permissão para mover este lead.');
+    }
+    setLeads((prev) =>
+      prev.map((l) => (l.id === leadId ? { ...l, stage: newStage, lastContactAt } : l))
+    );
   }, []);
 
   return { leads, loading, addLead, updateLead, deleteLead, updateLeadStage };
