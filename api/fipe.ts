@@ -34,7 +34,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const pathParam = req.query.path;
-  const segments = Array.isArray(pathParam) ? pathParam : pathParam ? [pathParam] : [];
+  const rawPath = Array.isArray(pathParam) ? pathParam.join('/') : pathParam ?? '';
+  const segments = rawPath.split('/').filter(Boolean);
   if (segments.length === 0 || !ALLOWED_PREFIXES.includes(segments[0])) {
     res.status(404).json({ error: 'Recurso não encontrado' });
     return;
