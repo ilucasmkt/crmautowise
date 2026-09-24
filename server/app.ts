@@ -1,4 +1,6 @@
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import fipeHandler from './routes/fipe.js';
 import teamInviteHandler from './routes/teamInvite.js';
 import whatsappConnectHandler from './routes/whatsapp/connect.js';
@@ -34,6 +36,18 @@ export function createApp(): Express {
   app.post('/api/whatsapp/send', asyncHandler(whatsappSendHandler));
   app.post('/api/whatsapp/sendMedia', asyncHandler(whatsappSendMediaHandler));
   app.get('/api/whatsapp/media', asyncHandler(whatsappMediaHandler));
+
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const distDir = path.resolve(__dirname, '..', 'dist');
+
+  app.use(express.static(distDir));
+  app.get('*', (req: Request, res: Response, next: NextFunction) => {
+    if (req.path.startsWith('/api/')) {
+      next();
+      return;
+    }
+    res.sendFile(path.join(distDir, 'index.html'));
+  });
 
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ error: 'Não encontrado' });

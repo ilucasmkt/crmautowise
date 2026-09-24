@@ -10,7 +10,8 @@
     "lint": "tsc --noEmit",
     "test": "vitest run",
     "create-store": "tsx scripts/create-store.ts",
-    "start": "tsx server/index.ts"
+    "start": "tsx server/index.ts",
+    "build:full": "npm run build && npm run start"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
