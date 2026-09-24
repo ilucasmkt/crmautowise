@@ -303,7 +303,13 @@ const AuthenticatedApp: React.FC<{ profile: Profile }> = ({ profile }) => {
           )}
 
           {activeSection === 'conversas' && (
-            <ConversasView teamMemberId={profile.id} />
+            <ConversasView
+              teamMemberId={profile.id}
+              assignedToName={profile.name}
+              leads={leads}
+              onAddLead={handleAddLead}
+              onNavigateToLeads={() => setActiveSection('leads')}
+            />
           )}
 
           {activeSection === 'equipe' && (

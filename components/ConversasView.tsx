@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MessageSquare, Send, RefreshCw, User, AlertCircle, ImagePlus, Mic, Trash2, Check } from 'lucide-react';
+import { MessageSquare, Send, RefreshCw, User, AlertCircle, ImagePlus, Mic, Trash2, Check, UserPlus, X, CheckCircle2 } from 'lucide-react';
 import {
   getWhatsAppChats,
   getWhatsAppMessages,
@@ -10,9 +10,25 @@ import {
 } from '../lib/evolutionClient';
 import { MediaBubble } from './MediaBubble';
 import { EmojiPicker } from './EmojiPicker';
+import { Lead, LeadTemperature } from '../types';
 
 interface ConversasViewProps {
   teamMemberId: string;
+  assignedToName: string;
+  leads: Lead[];
+  onAddLead: (lead: Omit<Lead, 'id' | 'createdAt' | 'lastContactAt'>) => void;
+  onNavigateToLeads?: () => void;
+}
+
+function normalizePhone(phone: string): string {
+  return phone.replace(/\D/g, '');
+}
+
+function phonesMatch(a: string, b: string): boolean {
+  const na = normalizePhone(a);
+  const nb = normalizePhone(b);
+  if (!na || !nb) return false;
+  return na.endsWith(nb) || nb.endsWith(na);
 }
 
 function formatChatTime(timestamp: number | null): string {
@@ -29,7 +45,13 @@ function formatMessageTime(timestamp: number): string {
   return new Date(timestamp * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
-export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) => {
+export const ConversasView: React.FC<ConversasViewProps> = ({
+  teamMemberId,
+  assignedToName,
+  leads,
+  onAddLead,
+  onNavigateToLeads,
+}) => {
   const [chats, setChats] = useState<WhatsAppChat[]>([]);
   const [chatsStatus, setChatsStatus] = useState<'loading' | 'idle' | 'error'>('loading');
   const [chatsError, setChatsError] = useState('');
@@ -50,6 +72,12 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
     const container = messagesContainerRef.current;
     if (container) container.scrollTop = container.scrollHeight;
   }, [messages, selectedChat]);
+
+  const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
+  const [leadName, setLeadName] = useState('');
+  const [leadVehicle, setLeadVehicle] = useState('');
+  const [leadTemperature, setLeadTemperature] = useState<LeadTemperature>('morno');
+  const [leadCreatedMsg, setLeadCreatedMsg] = useState('');
 
   const [recording, setRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
@@ -97,6 +125,7 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
   const loadMessages = async (chat: WhatsAppChat) => {
     setSelectedChat(chat);
     setSendError('');
+    setLeadCreatedMsg('');
     setMessagesStatus('loading');
     try {
       const result = await getWhatsAppMessages(teamMemberId, chat.remoteJid);
@@ -224,6 +253,38 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
     recorder.stop();
   };
 
+  const existingLead = selectedChat ? leads.find((lead) => phonesMatch(lead.phone, selectedChat.sendTo)) : undefined;
+
+  const handleOpenLeadModal = () => {
+    if (!selectedChat) return;
+    setLeadName(selectedChat.name !== selectedChat.sendTo ? selectedChat.name : '');
+    setLeadVehicle('');
+    setLeadTemperature('morno');
+    setIsLeadModalOpen(true);
+  };
+
+  const handleCreateLead = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedChat) return;
+    const lastCustomerMessage = [...messages].reverse().find((m) => !m.fromMe && m.type === 'text');
+    onAddLead({
+      name: leadName.trim() || selectedChat.sendTo,
+      phone: selectedChat.sendTo,
+      email: '',
+      interestedVehicle: leadVehicle.trim(),
+      source: 'WhatsApp',
+      stage: 'novo',
+      temperature: leadTemperature,
+      assignedTo: assignedToName,
+      notes: lastCustomerMessage
+        ? `Criado a partir da conversa no WhatsApp. Última mensagem do cliente: "${lastCustomerMessage.text}"`
+        : 'Criado a partir da conversa no WhatsApp.',
+    });
+    setIsLeadModalOpen(false);
+    setLeadCreatedMsg(`Lead "${leadName.trim() || selectedChat.sendTo}" criado com sucesso!`);
+    setTimeout(() => setLeadCreatedMsg(''), 4000);
+  };
+
   if (chatsStatus === 'error') {
     return (
       <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center">
@@ -320,11 +381,37 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
                     <User className="w-4 h-4 text-slate-400" />
                   )}
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-slate-900 truncate">{selectedChat.name}</p>
                   <p className="text-[11px] text-slate-400">{selectedChat.sendTo}</p>
                 </div>
+                {existingLead ? (
+                  <button
+                    type="button"
+                    onClick={onNavigateToLeads}
+                    title="Já existe um Lead para este contato"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Lead Existente
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleOpenLeadModal}
+                    title="Criar Lead a partir desta conversa"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-700 text-white shrink-0 transition-colors"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" /> Criar Lead
+                  </button>
+                )}
               </div>
+
+              {leadCreatedMsg && (
+                <div className="mx-4 mt-3 p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{leadCreatedMsg}</span>
+                </div>
+              )}
 
               <div ref={messagesContainerRef} className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2 bg-slate-50/50">
                 {messagesStatus === 'loading' ? (
@@ -450,6 +537,95 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
           )}
         </div>
       </div>
+
+      {isLeadModalOpen && selectedChat && (
+        <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-200">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-brand-600" />
+                <h2 className="text-base font-bold text-slate-900">Criar Lead a partir da Conversa</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsLeadModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200/60"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleCreateLead} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  Nome do Cliente
+                </label>
+                <input
+                  type="text"
+                  value={leadName}
+                  onChange={(e) => setLeadName(e.target.value)}
+                  placeholder={selectedChat.sendTo}
+                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  Telefone
+                </label>
+                <input
+                  type="text"
+                  value={selectedChat.sendTo}
+                  disabled
+                  className="w-full px-3 py-2 text-sm bg-slate-100 border border-slate-200 rounded-xl text-slate-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  Veículo de Interesse
+                </label>
+                <input
+                  type="text"
+                  value={leadVehicle}
+                  onChange={(e) => setLeadVehicle(e.target.value)}
+                  placeholder="Ex: Corolla XEI 2024"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  Temperatura
+                </label>
+                <select
+                  value={leadTemperature}
+                  onChange={(e) => setLeadTemperature(e.target.value as LeadTemperature)}
+                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl"
+                >
+                  <option value="quente">🔥 Quente</option>
+                  <option value="morno">🙂 Morno</option>
+                  <option value="frio">❄️ Frio</option>
+                </select>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Origem: WhatsApp • Responsável: {assignedToName}
+              </p>
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsLeadModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-700 text-white shadow-sm"
+                >
+                  Criar Lead
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
