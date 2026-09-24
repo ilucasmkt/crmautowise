@@ -9,6 +9,7 @@ import {
   WhatsAppMessage,
 } from '../lib/evolutionClient';
 import { MediaBubble } from './MediaBubble';
+import { EmojiPicker } from './EmojiPicker';
 
 interface ConversasViewProps {
   teamMemberId: string;
@@ -42,6 +43,20 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
   const [sending, setSending] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
+  const textInputRef = useRef<HTMLInputElement>(null);
+
+  const insertEmoji = (emoji: string) => {
+    const input = textInputRef.current;
+    const start = input?.selectionStart ?? draft.length;
+    const end = input?.selectionEnd ?? draft.length;
+    const next = draft.slice(0, start) + emoji + draft.slice(end);
+    setDraft(next);
+    requestAnimationFrame(() => {
+      input?.focus();
+      const pos = start + emoji.length;
+      input?.setSelectionRange(pos, pos);
+    });
+  };
 
   const loadChats = async () => {
     setChatsStatus('loading');
@@ -167,22 +182,34 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
                 key={chat.remoteJid}
                 onClick={() => loadMessages(chat)}
                 className={`w-full text-left px-4 py-3 border-b border-slate-100 flex items-center gap-3 transition-colors ${
-                  selectedChat?.remoteJid === chat.remoteJid ? 'bg-brand-50' : 'hover:bg-slate-50'
+                  selectedChat?.remoteJid === chat.remoteJid
+                    ? 'bg-brand-50'
+                    : !chat.lastMessageFromMe
+                    ? 'bg-amber-50/60 hover:bg-amber-50'
+                    : 'hover:bg-slate-50'
                 }`}
               >
-                <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                <div className="relative w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden shrink-0">
                   {chat.profilePicUrl ? (
                     <img src={chat.profilePicUrl} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <User className="w-5 h-5 text-slate-400" />
                   )}
+                  {!chat.lastMessageFromMe && (
+                    <span
+                      className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-amber-500 border-2 border-white"
+                      title="Aguardando sua resposta"
+                    />
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-1">
-                    <span className="text-sm font-bold text-slate-900 truncate">{chat.name}</span>
+                    <span className={`text-sm truncate ${!chat.lastMessageFromMe ? 'font-extrabold text-slate-900' : 'font-bold text-slate-900'}`}>
+                      {chat.name}
+                    </span>
                     <span className="text-[10px] text-slate-400 shrink-0">{formatChatTime(chat.lastMessageAt)}</span>
                   </div>
-                  <p className="text-xs text-slate-500 truncate">
+                  <p className={`text-xs truncate ${!chat.lastMessageFromMe ? 'text-amber-700 font-semibold' : 'text-slate-500'}`}>
                     {chat.lastMessageFromMe && <span className="text-slate-400">Você: </span>}
                     {chat.lastMessage || 'Sem mensagens de texto'}
                   </p>
@@ -293,7 +320,9 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
                 >
                   <Mic className="w-4 h-4" />
                 </button>
+                <EmojiPicker onSelect={insertEmoji} />
                 <input
+                  ref={textInputRef}
                   type="text"
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
