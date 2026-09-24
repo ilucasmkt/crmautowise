@@ -38,10 +38,11 @@ describe('getVisibleSections', () => {
     expect(sections).toContain('leads');
     expect(sections).toContain('crm');
     expect(sections).toContain('hotsite');
+    expect(sections).toContain('conversas');
   });
 
   it('includes every section for Administrador', () => {
-    expect(getVisibleSections('Administrador')).toHaveLength(7);
+    expect(getVisibleSections('Administrador')).toHaveLength(8);
   });
 });
 

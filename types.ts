@@ -1,4 +1,4 @@
-export type NavSection = 'inicio' | 'estoque' | 'leads' | 'crm' | 'hotsite' | 'equipe' | 'ajustes';
+export type NavSection = 'inicio' | 'estoque' | 'leads' | 'crm' | 'hotsite' | 'conversas' | 'equipe' | 'ajustes';
 
 export type HotSiteIntent = 'a_vista' | 'financiamento' | 'troca';
 

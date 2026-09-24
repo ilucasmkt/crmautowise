@@ -8,6 +8,7 @@ const SECTION_ACCESS: Record<NavSection, Role[]> = {
   leads: ['Administrador', 'Gerente de Vendas', 'Consultor de Vendas', 'Atendimento / BDC'],
   crm: ['Administrador', 'Gerente de Vendas', 'Consultor de Vendas', 'Atendimento / BDC'],
   hotsite: ['Administrador', 'Gerente de Vendas', 'Consultor de Vendas', 'Atendimento / BDC'],
+  conversas: ['Administrador', 'Gerente de Vendas', 'Consultor de Vendas', 'Atendimento / BDC'],
   equipe: ['Administrador', 'Gerente de Vendas'],
   ajustes: ['Administrador', 'Gerente de Vendas'],
 };

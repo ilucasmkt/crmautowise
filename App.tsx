@@ -18,6 +18,7 @@ import { LeadsView } from './components/LeadsView';
 import { KanbanView } from './components/KanbanView';
 import { HotSiteView } from './components/HotSiteView';
 import { EquipeView } from './components/EquipeView';
+import { ConversasView } from './components/ConversasView';
 import { AjustesView } from './components/AjustesView';
 import { LoginView } from './components/LoginView';
 import {
@@ -127,6 +128,10 @@ const AuthenticatedApp: React.FC<{ profile: Profile }> = ({ profile }) => {
     hotsite: {
       title: 'Hot Site & Landing Pages',
       subtitle: 'Páginas individuais para anúncios de cada veículo com qualificação imediata',
+    },
+    conversas: {
+      title: 'Conversas',
+      subtitle: 'Leia e responda as conversas do WhatsApp direto do CRM',
     },
     equipe: {
       title: 'Equipe de Vendas',
@@ -295,6 +300,10 @@ const AuthenticatedApp: React.FC<{ profile: Profile }> = ({ profile }) => {
               onAddLead={handleAddLead}
               onNavigateToLeads={() => setActiveSection('leads')}
             />
+          )}
+
+          {activeSection === 'conversas' && (
+            <ConversasView teamMemberId={profile.id} />
           )}
 
           {activeSection === 'equipe' && (

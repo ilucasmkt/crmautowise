@@ -12,7 +12,8 @@ import {
   Sparkles,
   ExternalLink,
   Globe,
-  LogOut
+  LogOut,
+  MessageSquare
 } from 'lucide-react';
 import { NavSection, TeamMember } from '../types';
 import { getVisibleSections } from '../lib/permissions';
@@ -77,6 +78,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: <Globe className="w-5 h-5" />,
       badge: 'Landpages',
       badgeColor: 'bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold',
+    },
+    {
+      id: 'conversas',
+      label: 'Conversas',
+      icon: <MessageSquare className="w-5 h-5" />,
     },
     {
       id: 'equipe',
