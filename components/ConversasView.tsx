@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { MessageSquare, Send, RefreshCw, User, AlertCircle } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { MessageSquare, Send, RefreshCw, User, AlertCircle, ImagePlus, Mic } from 'lucide-react';
 import {
   getWhatsAppChats,
   getWhatsAppMessages,
   sendWhatsAppMessage,
+  sendWhatsAppMedia,
   WhatsAppChat,
   WhatsAppMessage,
 } from '../lib/evolutionClient';
+import { MediaBubble } from './MediaBubble';
 
 interface ConversasViewProps {
   teamMemberId: string;
@@ -38,6 +40,8 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
 
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   const loadChats = async () => {
     setChatsStatus('loading');
@@ -77,9 +81,40 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
     try {
       await sendWhatsAppMessage(teamMemberId, selectedChat.remoteJid, text);
       setDraft('');
-      setMessages((prev) => [...prev, { id: `local-${Date.now()}`, fromMe: true, text, timestamp: Date.now() / 1000 }]);
+      setMessages((prev) => [
+        ...prev,
+        { id: `local-${Date.now()}`, fromMe: true, type: 'text', text, timestamp: Date.now() / 1000 },
+      ]);
     } catch (err) {
       setMessagesError(err instanceof Error ? err.message : 'Erro ao enviar a mensagem');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleAttachFile = async (file: File, mediaType: 'image' | 'audio') => {
+    if (!selectedChat || sending) return;
+    setSending(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      await sendWhatsAppMedia(teamMemberId, selectedChat.remoteJid, mediaType, base64, file.type, file.name);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `local-${Date.now()}`,
+          fromMe: true,
+          type: mediaType,
+          timestamp: Date.now() / 1000,
+          localDataUri: `data:${file.type};base64,${base64}`,
+        },
+      ]);
+    } catch (err) {
+      setMessagesError(err instanceof Error ? err.message : 'Erro ao enviar o arquivo');
     } finally {
       setSending(false);
     }
@@ -194,7 +229,21 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
                           : 'bg-white border border-slate-200 text-slate-800 rounded-bl-sm'
                       }`}
                     >
-                      <p className="whitespace-pre-wrap break-words">{message.text}</p>
+                      {message.type === 'text' && (
+                        <p className="whitespace-pre-wrap break-words">{message.text}</p>
+                      )}
+                      {(message.type === 'image' || message.type === 'audio') && (
+                        <MediaBubble
+                          teamMemberId={teamMemberId}
+                          messageId={message.id}
+                          type={message.type}
+                          caption={message.caption}
+                          localDataUri={message.localDataUri}
+                        />
+                      )}
+                      {message.type === 'unsupported' && (
+                        <p className="italic text-slate-400">[mensagem não suportada]</p>
+                      )}
                       <span className={`block text-[10px] mt-1 ${message.fromMe ? 'text-brand-100' : 'text-slate-400'}`}>
                         {formatMessageTime(message.timestamp)}
                       </span>
@@ -205,6 +254,46 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
 
               <form onSubmit={handleSend} className="p-3 border-t border-slate-200 flex items-center gap-2">
                 <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleAttachFile(file, 'image');
+                    e.target.value = '';
+                  }}
+                />
+                <input
+                  ref={audioInputRef}
+                  type="file"
+                  accept="audio/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleAttachFile(file, 'audio');
+                    e.target.value = '';
+                  }}
+                />
+                <button
+                  type="button"
+                  disabled={sending}
+                  onClick={() => imageInputRef.current?.click()}
+                  title="Anexar imagem"
+                  className="p-2.5 rounded-xl text-slate-500 hover:text-brand-600 hover:bg-brand-50 disabled:opacity-50 transition-colors shrink-0"
+                >
+                  <ImagePlus className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  disabled={sending}
+                  onClick={() => audioInputRef.current?.click()}
+                  title="Anexar áudio"
+                  className="p-2.5 rounded-xl text-slate-500 hover:text-brand-600 hover:bg-brand-50 disabled:opacity-50 transition-colors shrink-0"
+                >
+                  <Mic className="w-4 h-4" />
+                </button>
+                <input
                   type="text"
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
@@ -214,7 +303,7 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
                 <button
                   type="submit"
                   disabled={!draft.trim() || sending}
-                  className="p-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-50 transition-colors"
+                  className="p-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-50 transition-colors shrink-0"
                 >
                   {sending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 </button>

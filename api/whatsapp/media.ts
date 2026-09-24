@@ -24,9 +24,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const teamMemberId = typeof req.query.teamMemberId === 'string' ? req.query.teamMemberId : null;
-  const remoteJid = typeof req.query.remoteJid === 'string' ? req.query.remoteJid : null;
-  if (!teamMemberId || !remoteJid) {
-    res.status(400).json({ error: 'teamMemberId e remoteJid são obrigatórios' });
+  const messageId = typeof req.query.messageId === 'string' ? req.query.messageId : null;
+  if (!teamMemberId || !messageId) {
+    res.status(400).json({ error: 'teamMemberId e messageId são obrigatórios' });
     return;
   }
 
@@ -43,41 +43,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  let messagesResponse: Response;
+  let mediaResponse: Response;
   try {
-    messagesResponse = await fetch(`${evolutionUrl}/chat/findMessages/${instanceName}`, {
+    mediaResponse = await fetch(`${evolutionUrl}/chat/getBase64FromMediaMessage/${instanceName}`, {
       method: 'POST',
       headers: { apikey: evolutionKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ where: { key: { remoteJid } } }),
+      body: JSON.stringify({ message: { key: { id: messageId } } }),
     });
   } catch (err) {
     console.error('Erro ao contatar a Evolution API:', err);
-    res.status(502).json({ error: 'Falha ao consultar as mensagens' });
+    res.status(502).json({ error: 'Falha ao carregar a mídia' });
     return;
   }
 
-  const body = await messagesResponse.json().catch(() => null);
-  const records = Array.isArray(body?.messages?.records) ? body.messages.records : [];
+  const body = await mediaResponse.json().catch(() => null);
+  if (!mediaResponse.ok || !body?.base64) {
+    res.status(502).json({ error: 'Não foi possível carregar a mídia' });
+    return;
+  }
 
-  const messages = records
-    .map((record: any) => {
-      const id = record.key?.id as string;
-      const fromMe = Boolean(record.key?.fromMe);
-      const timestamp = record.messageTimestamp ?? 0;
-      const message = record.message ?? {};
-
-      if (typeof message.conversation === 'string') {
-        return { id, fromMe, timestamp, type: 'text' as const, text: message.conversation };
-      }
-      if (message.imageMessage) {
-        return { id, fromMe, timestamp, type: 'image' as const, caption: message.imageMessage.caption };
-      }
-      if (message.audioMessage) {
-        return { id, fromMe, timestamp, type: 'audio' as const };
-      }
-      return { id, fromMe, timestamp, type: 'unsupported' as const };
-    })
-    .sort((a: { timestamp: number }, b: { timestamp: number }) => a.timestamp - b.timestamp);
-
-  res.status(200).json({ messages });
+  res.status(200).json({ mimetype: body.mimetype, base64: body.base64 });
 }

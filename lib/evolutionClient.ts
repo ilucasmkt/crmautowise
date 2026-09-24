@@ -20,11 +20,22 @@ export interface WhatsAppChat {
   lastMessageFromMe: boolean;
 }
 
+export type WhatsAppMessageType = 'text' | 'image' | 'audio' | 'unsupported';
+
 export interface WhatsAppMessage {
   id: string;
   fromMe: boolean;
-  text: string;
   timestamp: number;
+  type: WhatsAppMessageType;
+  text?: string;
+  caption?: string;
+  /** Set only for optimistic local messages we just sent (image/audio), so they render instantly. */
+  localDataUri?: string;
+}
+
+export interface WhatsAppMedia {
+  mimetype: string;
+  base64: string;
 }
 
 async function authHeaders(): Promise<Record<string, string>> {
@@ -102,5 +113,36 @@ export async function sendWhatsAppMessage(teamMemberId: string, remoteJid: strin
   if (!response.ok) {
     const body = await response.json().catch(() => ({ error: 'Erro ao enviar a mensagem' }));
     throw new Error(body.error ?? 'Erro ao enviar a mensagem');
+  }
+}
+
+export async function getWhatsAppMedia(teamMemberId: string, messageId: string): Promise<WhatsAppMedia> {
+  const response = await fetch(
+    `/api/whatsapp/media?teamMemberId=${encodeURIComponent(teamMemberId)}&messageId=${encodeURIComponent(messageId)}`,
+    { headers: await authHeaders() }
+  );
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({ error: 'Erro ao carregar a mídia' }));
+    throw new Error(body.error ?? 'Erro ao carregar a mídia');
+  }
+  return response.json();
+}
+
+export async function sendWhatsAppMedia(
+  teamMemberId: string,
+  remoteJid: string,
+  mediaType: 'image' | 'audio',
+  base64: string,
+  mimetype: string,
+  fileName?: string
+): Promise<void> {
+  const response = await fetch('/api/whatsapp/sendMedia', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    body: JSON.stringify({ teamMemberId, remoteJid, mediaType, base64, mimetype, fileName }),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({ error: 'Erro ao enviar o arquivo' }));
+    throw new Error(body.error ?? 'Erro ao enviar o arquivo');
   }
 }
