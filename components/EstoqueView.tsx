@@ -29,6 +29,7 @@ import {
   Check
 } from 'lucide-react';
 import { Vehicle } from '../types';
+import { FipeVehiclePicker, FipeFillResult } from './FipeVehiclePicker';
 
 interface EstoqueViewProps {
   vehicles: Vehicle[];
@@ -72,6 +73,9 @@ export const EstoqueView: React.FC<EstoqueViewProps> = ({
   const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
   const [photoInputMode, setPhotoInputMode] = useState<'upload' | 'url'>('upload');
   const [featuresText, setFeaturesText] = useState('Bancos em couro, Câmera de ré, Sensor de estacionamento, Multimídia');
+  const [fillMode, setFillMode] = useState<'fipe' | 'manual'>('fipe');
+  const [fipeCode, setFipeCode] = useState('');
+  const [fipeReferenceMonth, setFipeReferenceMonth] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -135,6 +139,18 @@ export const EstoqueView: React.FC<EstoqueViewProps> = ({
     });
   };
 
+  const handleFipeFill = (result: FipeFillResult) => {
+    setBrand(result.brand);
+    setModel(result.model);
+    setVersion(result.version);
+    setYear(result.modelYear);
+    setModelYear(result.modelYear);
+    setFuel(result.fuel);
+    setFipePrice(result.fipePrice);
+    setFipeCode(result.fipeCode);
+    setFipeReferenceMonth(result.fipeReferenceMonth);
+  };
+
   const handleOpenAdd = () => {
     setEditingVehicle(null);
     setBrand('');
@@ -154,6 +170,9 @@ export const EstoqueView: React.FC<EstoqueViewProps> = ({
     setUploadedPhotos([carPhotoPresets[0].url]);
     setPhotoInputMode('upload');
     setFeaturesText('Ar condicionado digital, Direção elétrica, Central multimídia com Apple CarPlay, Câmera de ré, Rodas de liga leve');
+    setFillMode('fipe');
+    setFipeCode('');
+    setFipeReferenceMonth('');
     setIsModalOpen(true);
   };
 
@@ -177,6 +196,9 @@ export const EstoqueView: React.FC<EstoqueViewProps> = ({
     setUploadedPhotos(photos);
     setPhotoInputMode(photos.length > 0 ? 'upload' : 'url');
     setFeaturesText(v.features.join(', '));
+    setFillMode('manual');
+    setFipeCode(v.fipeCode ?? '');
+    setFipeReferenceMonth(v.fipeReferenceMonth ?? '');
     setIsModalOpen(true);
   };
 
@@ -200,6 +222,8 @@ export const EstoqueView: React.FC<EstoqueViewProps> = ({
       mileage: Number(mileage) || 0,
       price: Number(price) || 0,
       fipePrice: Number(fipePrice) || Number(price),
+      fipeCode: fipeCode || undefined,
+      fipeReferenceMonth: fipeReferenceMonth || undefined,
       fuel,
       transmission,
       color: color.trim() || 'Branco',
@@ -645,37 +669,56 @@ export const EstoqueView: React.FC<EstoqueViewProps> = ({
 
             {/* Modal Form */}
             <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 flex-1">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                    Marca do Veículo *
-                  </label>
-                  <input
-                    id="car-brand-input"
-                    type="text"
-                    required
-                    placeholder="Ex: Toyota, Honda, Jeep..."
-                    value={brand}
-                    onChange={(e) => setBrand(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
-                  />
+              {editingVehicle && fipeCode && fillMode === 'manual' && (
+                <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
+                  <span className="text-[11px] font-semibold text-emerald-700">
+                    Sincronizado com a FIPE (código {fipeCode}, referência {fipeReferenceMonth})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setFillMode('fipe')}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-600 text-white hover:bg-emerald-700"
+                  >
+                    Atualizar da FIPE
+                  </button>
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                    Modelo *
-                  </label>
-                  <input
-                    id="car-model-input"
-                    type="text"
-                    required
-                    placeholder="Ex: Corolla, Compass, Nivus..."
-                    value={model}
-                    onChange={(e) => setModel(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
-                  />
+              <FipeVehiclePicker mode={fillMode} onModeChange={setFillMode} onFill={handleFipeFill} />
+
+              {fillMode === 'manual' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                      Marca do Veículo *
+                    </label>
+                    <input
+                      id="car-brand-input"
+                      type="text"
+                      required
+                      placeholder="Ex: Toyota, Honda, Jeep..."
+                      value={brand}
+                      onChange={(e) => setBrand(e.target.value)}
+                      className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                      Modelo *
+                    </label>
+                    <input
+                      id="car-model-input"
+                      type="text"
+                      required
+                      placeholder="Ex: Corolla, Compass, Nivus..."
+                      value={model}
+                      onChange={(e) => setModel(e.target.value)}
+                      className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
