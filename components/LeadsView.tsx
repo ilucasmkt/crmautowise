@@ -124,7 +124,7 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
         ...leadPayload,
         id: editingLead.id,
         createdAt: editingLead.createdAt,
-        lastContactAt: 'Hoje às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        lastContactAt: new Date().toISOString(),
       });
     } else {
       onAddLead(leadPayload);
