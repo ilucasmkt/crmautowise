@@ -1,7 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { extractBearerToken, authorizeTeamMemberAccess, AuthorizationError } from '../_shared/whatsapp.js';
-import { jidToNumber } from '../_shared/jid.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -24,9 +23,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  const { teamMemberId, remoteJid, text } = req.body ?? {};
-  if (!teamMemberId || !remoteJid || !text) {
-    res.status(400).json({ error: 'teamMemberId, remoteJid e text são obrigatórios' });
+  const { teamMemberId, number, text } = req.body ?? {};
+  if (!teamMemberId || !number || !text) {
+    res.status(400).json({ error: 'teamMemberId, number e text são obrigatórios' });
     return;
   }
 
@@ -49,7 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       method: 'POST',
       headers: { apikey: evolutionKey, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        number: jidToNumber(remoteJid),
+        number,
         textMessage: { text },
       }),
     });
@@ -60,6 +59,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (!sendResponse.ok) {
+    const errorBody = await sendResponse.text().catch(() => '');
+    console.error('Evolution API rejeitou o envio:', sendResponse.status, errorBody);
     res.status(502).json({ error: 'Não foi possível enviar a mensagem' });
     return;
   }

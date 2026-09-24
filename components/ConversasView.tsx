@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MessageSquare, Send, RefreshCw, User, AlertCircle, ImagePlus, Mic } from 'lucide-react';
+import { MessageSquare, Send, RefreshCw, User, AlertCircle, ImagePlus, FileAudio } from 'lucide-react';
 import {
   getWhatsAppChats,
   getWhatsAppMessages,
@@ -41,6 +41,7 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
 
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState('');
   const imageInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
@@ -77,6 +78,7 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
 
   const loadMessages = async (chat: WhatsAppChat) => {
     setSelectedChat(chat);
+    setSendError('');
     setMessagesStatus('loading');
     try {
       const result = await getWhatsAppMessages(teamMemberId, chat.remoteJid);
@@ -93,15 +95,16 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
     if (!selectedChat || !draft.trim() || sending) return;
     const text = draft.trim();
     setSending(true);
+    setSendError('');
     try {
-      await sendWhatsAppMessage(teamMemberId, selectedChat.remoteJid, text);
+      await sendWhatsAppMessage(teamMemberId, selectedChat.sendTo, text);
       setDraft('');
       setMessages((prev) => [
         ...prev,
         { id: `local-${Date.now()}`, fromMe: true, type: 'text', text, timestamp: Date.now() / 1000 },
       ]);
     } catch (err) {
-      setMessagesError(err instanceof Error ? err.message : 'Erro ao enviar a mensagem');
+      setSendError(err instanceof Error ? err.message : 'Erro ao enviar a mensagem');
     } finally {
       setSending(false);
     }
@@ -110,6 +113,7 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
   const handleAttachFile = async (file: File, mediaType: 'image' | 'audio') => {
     if (!selectedChat || sending) return;
     setSending(true);
+    setSendError('');
     try {
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -117,7 +121,7 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
-      await sendWhatsAppMedia(teamMemberId, selectedChat.remoteJid, mediaType, base64, file.type, file.name);
+      await sendWhatsAppMedia(teamMemberId, selectedChat.sendTo, mediaType, base64, file.type, file.name);
       setMessages((prev) => [
         ...prev,
         {
@@ -129,7 +133,7 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
         },
       ]);
     } catch (err) {
-      setMessagesError(err instanceof Error ? err.message : 'Erro ao enviar o arquivo');
+      setSendError(err instanceof Error ? err.message : 'Erro ao enviar o arquivo');
     } finally {
       setSending(false);
     }
@@ -279,6 +283,9 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
                 )}
               </div>
 
+              {sendError && (
+                <p className="px-3 py-2 text-xs text-red-600 bg-red-50 border-t border-red-100">{sendError}</p>
+              )}
               <form onSubmit={handleSend} className="p-3 border-t border-slate-200 flex items-center gap-2">
                 <input
                   ref={imageInputRef}
@@ -315,10 +322,10 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
                   type="button"
                   disabled={sending}
                   onClick={() => audioInputRef.current?.click()}
-                  title="Anexar áudio"
+                  title="Anexar arquivo de áudio"
                   className="p-2.5 rounded-xl text-slate-500 hover:text-brand-600 hover:bg-brand-50 disabled:opacity-50 transition-colors shrink-0"
                 >
-                  <Mic className="w-4 h-4" />
+                  <FileAudio className="w-4 h-4" />
                 </button>
                 <EmojiPicker onSelect={insertEmoji} />
                 <input

@@ -104,11 +104,11 @@ export async function getWhatsAppMessages(teamMemberId: string, remoteJid: strin
   return data.messages;
 }
 
-export async function sendWhatsAppMessage(teamMemberId: string, remoteJid: string, text: string): Promise<void> {
+export async function sendWhatsAppMessage(teamMemberId: string, number: string, text: string): Promise<void> {
   const response = await fetch('/api/whatsapp/send', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-    body: JSON.stringify({ teamMemberId, remoteJid, text }),
+    body: JSON.stringify({ teamMemberId, number, text }),
   });
   if (!response.ok) {
     const body = await response.json().catch(() => ({ error: 'Erro ao enviar a mensagem' }));
@@ -130,7 +130,7 @@ export async function getWhatsAppMedia(teamMemberId: string, messageId: string):
 
 export async function sendWhatsAppMedia(
   teamMemberId: string,
-  remoteJid: string,
+  number: string,
   mediaType: 'image' | 'audio',
   base64: string,
   mimetype: string,
@@ -139,7 +139,7 @@ export async function sendWhatsAppMedia(
   const response = await fetch('/api/whatsapp/sendMedia', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-    body: JSON.stringify({ teamMemberId, remoteJid, mediaType, base64, mimetype, fileName }),
+    body: JSON.stringify({ teamMemberId, number, mediaType, base64, mimetype, fileName }),
   });
   if (!response.ok) {
     const body = await response.json().catch(() => ({ error: 'Erro ao enviar o arquivo' }));

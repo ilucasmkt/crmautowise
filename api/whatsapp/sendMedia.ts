@@ -1,7 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { extractBearerToken, authorizeTeamMemberAccess, AuthorizationError } from '../_shared/whatsapp.js';
-import { jidToNumber } from '../_shared/jid.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -24,9 +23,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  const { teamMemberId, remoteJid, mediaType, base64, mimetype, fileName } = req.body ?? {};
-  if (!teamMemberId || !remoteJid || !base64 || (mediaType !== 'image' && mediaType !== 'audio')) {
-    res.status(400).json({ error: 'teamMemberId, remoteJid, mediaType (image|audio) e base64 são obrigatórios' });
+  const { teamMemberId, number, mediaType, base64, mimetype, fileName } = req.body ?? {};
+  if (!teamMemberId || !number || !base64 || (mediaType !== 'image' && mediaType !== 'audio')) {
+    res.status(400).json({ error: 'teamMemberId, number, mediaType (image|audio) e base64 são obrigatórios' });
     return;
   }
 
@@ -43,7 +42,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  const number = jidToNumber(remoteJid);
   const path = mediaType === 'image' ? 'sendMedia' : 'sendWhatsAppAudio';
   const body =
     mediaType === 'image'
@@ -64,6 +62,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (!sendResponse.ok) {
+    const errorBody = await sendResponse.text().catch(() => '');
+    console.error('Evolution API rejeitou o envio:', sendResponse.status, errorBody);
     res.status(502).json({ error: 'Não foi possível enviar o arquivo' });
     return;
   }
