@@ -19,16 +19,13 @@ import {
   QrCode,
   Wifi,
   WifiOff,
-  Smartphone,
-  Battery,
   RefreshCw,
-  Send,
   CheckCircle2,
-  Zap,
   Globe,
   MessageSquare
 } from 'lucide-react';
 import { TeamMember } from '../types';
+import { connectWhatsApp, disconnectWhatsApp, getWhatsAppStatus } from '../lib/evolutionClient';
 
 interface EquipeViewProps {
   team: TeamMember[];
@@ -73,80 +70,86 @@ export const EquipeView: React.FC<EquipeViewProps> = ({
 
   // WhatsApp Sync State
   const [whatsappSyncMember, setWhatsappSyncMember] = useState<TeamMember | null>(null);
-  const [syncTab, setSyncTab] = useState<'qrcode' | 'api'>('qrcode');
-  const [qrTimer, setQrTimer] = useState<number>(45);
-  const [isConnecting, setIsConnecting] = useState<boolean>(false);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [connectStatus, setConnectStatus] = useState<'idle' | 'loading' | 'waiting' | 'error'>('idle');
+  const [connectError, setConnectError] = useState<string>('');
   const [syncSuccessMsg, setSyncSuccessMsg] = useState<string | null>(null);
-  const [apiInstanceName, setApiInstanceName] = useState<string>('');
-  const [apiEndpoint, setApiEndpoint] = useState<string>('https://api.autowise.com/v1/instance');
-  const [apiKey, setApiKey] = useState<string>('');
-  const [testNumber, setTestNumber] = useState<string>('');
-  const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
 
-  // QR Code refresh timer countdown
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (whatsappSyncMember && syncTab === 'qrcode') {
-      interval = setInterval(() => {
-        setQrTimer((prev) => (prev > 1 ? prev - 1 : 45));
-      }, 1000);
+  const startConnectFlow = async (member: TeamMember) => {
+    setQrCode(null);
+    setConnectError('');
+    setConnectStatus('loading');
+    try {
+      const result = await connectWhatsApp(member.id);
+      setQrCode(result.qrCodeBase64);
+      setConnectStatus('waiting');
+    } catch (err) {
+      setConnectStatus('error');
+      setConnectError(err instanceof Error ? err.message : 'Erro ao gerar QR Code');
     }
-    return () => clearInterval(interval);
-  }, [whatsappSyncMember, syncTab]);
+  };
 
   const handleOpenWhatsAppSync = (member: TeamMember) => {
     setWhatsappSyncMember(member);
-    setSyncTab('qrcode');
-    setQrTimer(45);
     setSyncSuccessMsg(null);
-    setApiInstanceName(`vendedor_${member.name.toLowerCase().replace(/\s+/g, '_')}`);
-    setApiKey(`wise_live_${member.id.replace(/-/g, '')}_${Math.random().toString(36).substring(7)}`);
-    setTestNumber(member.phone || '(11) 98112-9900');
-    setTestStatus('idle');
+    setQrCode(null);
+    setConnectError('');
+    if (member.whatsappStatus === 'conectado') {
+      setConnectStatus('idle');
+    } else {
+      startConnectFlow(member);
+    }
   };
 
-  const handleSimulateQRScan = () => {
-    if (!whatsappSyncMember) return;
-    setIsConnecting(true);
+  // Poll connection status every 3s while a QR Code is being displayed
+  useEffect(() => {
+    if (!whatsappSyncMember || connectStatus !== 'waiting') return;
+    const member = whatsappSyncMember;
+    const interval = setInterval(async () => {
+      try {
+        const result = await getWhatsAppStatus(member.id);
+        if (result.state === 'open') {
+          const updated: TeamMember = {
+            ...member,
+            whatsappStatus: 'conectado',
+            whatsappConnectedNumber: result.phoneNumber || member.phone,
+            whatsappConnectedAt: 'Hoje às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+          };
+          onUpdateMember(updated);
+          setWhatsappSyncMember(updated);
+          setConnectStatus('idle');
+          setQrCode(null);
+          setSyncSuccessMsg(`WhatsApp de ${updated.name} sincronizado com sucesso!`);
+          setTimeout(() => setSyncSuccessMsg(null), 4000);
+        }
+      } catch {
+        // Transient polling error — ignore and retry on the next tick.
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [whatsappSyncMember, connectStatus, onUpdateMember]);
 
-    setTimeout(() => {
-      setIsConnecting(false);
-      const updated: TeamMember = {
-        ...whatsappSyncMember,
-        whatsappStatus: 'conectado',
-        whatsappConnectedNumber: whatsappSyncMember.phone,
-        whatsappSessionId: `sess_${whatsappSyncMember.id}_${Date.now()}`,
-        whatsappBattery: 92,
-        whatsappConnectedAt: 'Hoje às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-      };
-
-      onUpdateMember(updated);
-      setWhatsappSyncMember(updated);
-      setSyncSuccessMsg(`WhatsApp de ${updated.name} sincronizado com sucesso via QR Code!`);
-      setTimeout(() => setSyncSuccessMsg(null), 4000);
-    }, 1200);
-  };
-
-  const handleDisconnectWhatsApp = (member: TeamMember) => {
+  const handleDisconnectWhatsApp = async (member: TeamMember) => {
+    try {
+      await disconnectWhatsApp(member.id);
+    } catch (err) {
+      setConnectStatus('error');
+      setConnectError(err instanceof Error ? err.message : 'Erro ao desconectar');
+      return;
+    }
     const updated: TeamMember = {
       ...member,
       whatsappStatus: 'desconectado',
+      whatsappConnectedNumber: undefined,
       whatsappSessionId: undefined,
       whatsappConnectedAt: undefined,
       whatsappBattery: undefined,
     };
     onUpdateMember(updated);
     setWhatsappSyncMember(updated);
+    setConnectStatus('idle');
     setSyncSuccessMsg(`Sessão de WhatsApp de ${member.name} desconectada.`);
     setTimeout(() => setSyncSuccessMsg(null), 3000);
-  };
-
-  const handleSendTestMessage = () => {
-    setTestStatus('sending');
-    setTimeout(() => {
-      setTestStatus('sent');
-      setTimeout(() => setTestStatus('idle'), 3500);
-    }, 1000);
   };
 
   const handleOpenAdd = () => {
@@ -357,12 +360,6 @@ export const EquipeView: React.FC<EquipeViewProps> = ({
                       }`} />
                       <span>WhatsApp Individual</span>
                     </div>
-
-                    {member.whatsappStatus === 'conectado' && (
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <Battery className="w-3 h-3 text-emerald-600" /> {member.whatsappBattery || 92}%
-                      </span>
-                    )}
                   </div>
 
                   <div className="flex items-center justify-between gap-2">
@@ -636,247 +633,107 @@ export const EquipeView: React.FC<EquipeViewProps> = ({
               </div>
             )}
 
-            {/* Modal Navigation Tabs */}
-            <div className="flex border-b border-slate-200 px-6 pt-2 bg-slate-50/50">
-              <button
-                onClick={() => setSyncTab('qrcode')}
-                className={`pb-3 px-3 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-colors ${
-                  syncTab === 'qrcode'
-                    ? 'border-emerald-600 text-emerald-700'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <QrCode className="w-4 h-4" />
-                <span>Escanear QR Code</span>
-              </button>
-              <button
-                onClick={() => setSyncTab('api')}
-                className={`pb-3 px-3 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-colors ${
-                  syncTab === 'api'
-                    ? 'border-emerald-600 text-emerald-700'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <Zap className="w-4 h-4" />
-                <span>Configuração de API & Webhook</span>
-              </button>
-            </div>
-
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto space-y-5 flex-1">
-              {syncTab === 'qrcode' ? (
-                <div className="space-y-4 text-center">
-                  {whatsappSyncMember.whatsappStatus === 'conectado' ? (
-                    <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-center space-y-3">
-                      <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center shadow-inner">
-                        <CheckCircle2 className="w-8 h-8" />
-                      </div>
-                      <div>
-                        <h4 className="text-base font-extrabold text-emerald-950">WhatsApp Sincronizado e Ativo</h4>
-                        <p className="text-xs text-emerald-700 mt-1">
-                          Número conectado: <strong className="font-bold">{whatsappSyncMember.whatsappConnectedNumber || whatsappSyncMember.phone}</strong>
-                        </p>
-                        <p className="text-[11px] text-emerald-600 mt-0.5">
-                          Conectado em: {whatsappSyncMember.whatsappConnectedAt || 'Hoje'} • Bateria: {whatsappSyncMember.whatsappBattery || 92}%
-                        </p>
-                      </div>
-
-                      <p className="text-xs text-slate-600 bg-white/70 p-3 rounded-xl border border-emerald-100">
-                        Quando este vendedor responder a um LEAD, o CRM enviará a mensagem diretamente pelo WhatsApp particular deste vendedor!
-                      </p>
-
-                      <div className="pt-2 flex justify-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleDisconnectWhatsApp(whatsappSyncMember)}
-                          className="px-4 py-2 rounded-xl text-xs font-bold bg-white border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
-                        >
-                          Desconectar Sessão
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleSimulateQRScan}
-                          className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors"
-                        >
-                          Reconectar
-                        </button>
-                      </div>
+              <div className="space-y-4 text-center">
+                {whatsappSyncMember.whatsappStatus === 'conectado' && connectStatus !== 'waiting' && connectStatus !== 'loading' ? (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-center space-y-3">
+                    <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center shadow-inner">
+                      <CheckCircle2 className="w-8 h-8" />
                     </div>
-                  ) : (
-                    <>
-                      <div className="space-y-1">
-                        <h4 className="text-sm font-extrabold text-slate-900">
-                          Abra o WhatsApp no aparelho de {whatsappSyncMember.name}
-                        </h4>
-                        <p className="text-xs text-slate-500">
-                          Escaneie o QR Code abaixo para sincronizar a conta do vendedor com o CRM
-                        </p>
-                      </div>
+                    <div>
+                      <h4 className="text-base font-extrabold text-emerald-950">WhatsApp Sincronizado e Ativo</h4>
+                      <p className="text-xs text-emerald-700 mt-1">
+                        Número conectado: <strong className="font-bold">{whatsappSyncMember.whatsappConnectedNumber || whatsappSyncMember.phone}</strong>
+                      </p>
+                      <p className="text-[11px] text-emerald-600 mt-0.5">
+                        Conectado em: {whatsappSyncMember.whatsappConnectedAt || 'Hoje'}
+                      </p>
+                    </div>
 
-                      {/* QR Code Container */}
-                      <div className="relative inline-block p-4 bg-white rounded-3xl border-2 border-emerald-500/40 shadow-xl mx-auto">
-                        {/* Mock QR Pattern in SVG with WhatsApp Center Logo */}
-                        <div className="relative w-52 h-52 bg-slate-950 rounded-2xl p-2 flex items-center justify-center overflow-hidden">
-                          {/* Stylized QR Grid */}
-                          <svg className="w-full h-full text-white" viewBox="0 0 200 200" fill="currentColor">
-                            {/* Corner anchors */}
-                            <rect x="15" y="15" width="45" height="45" rx="6" fill="#10b981" />
-                            <rect x="25" y="25" width="25" height="25" rx="3" fill="#020617" />
-                            <rect x="32" y="32" width="11" height="11" fill="#10b981" />
-
-                            <rect x="140" y="15" width="45" height="45" rx="6" fill="#10b981" />
-                            <rect x="150" y="25" width="25" height="25" rx="3" fill="#020617" />
-                            <rect x="157" y="32" width="11" height="11" fill="#10b981" />
-
-                            <rect x="15" y="140" width="45" height="45" rx="6" fill="#10b981" />
-                            <rect x="25" y="150" width="25" height="25" rx="3" fill="#020617" />
-                            <rect x="32" y="157" width="11" height="11" fill="#10b981" />
-
-                            {/* Data points */}
-                            <rect x="75" y="20" width="12" height="12" rx="2" />
-                            <rect x="95" y="20" width="12" height="12" rx="2" />
-                            <rect x="115" y="20" width="12" height="12" rx="2" />
-                            <rect x="75" y="40" width="12" height="12" rx="2" />
-                            <rect x="115" y="40" width="12" height="12" rx="2" />
-
-                            <rect x="20" y="75" width="12" height="12" rx="2" />
-                            <rect x="40" y="75" width="12" height="12" rx="2" />
-                            <rect x="20" y="95" width="12" height="12" rx="2" />
-                            <rect x="40" y="115" width="12" height="12" rx="2" />
-
-                            <rect x="145" y="75" width="12" height="12" rx="2" />
-                            <rect x="165" y="95" width="12" height="12" rx="2" />
-                            <rect x="145" y="115" width="12" height="12" rx="2" />
-
-                            <rect x="75" y="145" width="12" height="12" rx="2" />
-                            <rect x="95" y="145" width="12" height="12" rx="2" />
-                            <rect x="115" y="165" width="12" height="12" rx="2" />
-                            <rect x="145" y="145" width="12" height="12" rx="2" />
-                            <rect x="165" y="165" width="12" height="12" rx="2" />
-                          </svg>
-
-                          {/* Center WhatsApp icon */}
-                          <div className="absolute inset-0 m-auto w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg border-2 border-slate-950">
-                            <Phone className="w-6 h-6 fill-white" />
-                          </div>
-                        </div>
-
-                        {/* QR Code timer badge */}
-                        <div className="mt-2 text-[11px] font-bold text-slate-500 flex items-center justify-center gap-1.5">
-                          <RefreshCw className="w-3.5 h-3.5 text-emerald-600 animate-spin" style={{ animationDuration: '3s' }} />
-                          <span>Atualiza em {qrTimer}s</span>
-                        </div>
-                      </div>
-
-                      {/* Instructions */}
-                      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-left text-xs space-y-1.5 text-slate-700">
-                        <span className="font-bold text-slate-900 block mb-1">Como conectar:</span>
-                        <p>1. No celular do vendedor, abra o aplicativo <strong>WhatsApp</strong>.</p>
-                        <p>2. Toque em <strong>Configurações</strong> ou nos <strong>três pontinhos</strong> no topo.</p>
-                        <p>3. Selecione <strong>Aparelhos Conectados</strong> e toque em <strong>Conectar um Aparelho</strong>.</p>
-                        <p>4. Aponte a câmera para este QR Code.</p>
-                      </div>
-
-                      {/* Action to simulate immediate connection */}
-                      <div className="pt-2">
-                        <button
-                          id="simulate-scan-qr-btn"
-                          type="button"
-                          disabled={isConnecting}
-                          onClick={handleSimulateQRScan}
-                          className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2"
-                        >
-                          {isConnecting ? (
-                            <>
-                              <RefreshCw className="w-4 h-4 animate-spin" />
-                              <span>Lendo QR Code e pareando dispositivo...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Smartphone className="w-4 h-4" />
-                              <span>Simular Leitura no Celular & Conectar Agora</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1">
-                    <span className="font-bold text-slate-900 block">Integração Direta via API (Evolution / Baileys)</span>
-                    <p>
-                      Cada usuário pode ser mapeado para sua respectiva instância dedicada na API de WhatsApp para disparo e recebimento autônomo.
+                    <p className="text-xs text-slate-600 bg-white/70 p-3 rounded-xl border border-emerald-100">
+                      Quando este vendedor responder a um LEAD, o CRM enviará a mensagem diretamente pelo WhatsApp particular deste vendedor!
                     </p>
-                  </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Identificador da Instância (Instance Name)
-                    </label>
-                    <input
-                      type="text"
-                      value={apiInstanceName}
-                      onChange={(e) => setApiInstanceName(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-mono"
-                    />
-                  </div>
+                    {connectStatus === 'error' && (
+                      <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl p-2">{connectError}</p>
+                    )}
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Endpoint da API WhatsApp
-                    </label>
-                    <input
-                      type="text"
-                      value={apiEndpoint}
-                      onChange={(e) => setApiEndpoint(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Token de Autenticação / API Key
-                    </label>
-                    <input
-                      type="text"
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl font-mono"
-                    />
-                  </div>
-
-                  {/* Test message trigger */}
-                  <div className="pt-3 border-t border-slate-200 space-y-2">
-                    <span className="text-xs font-bold text-slate-800 block">Testar Conexão com Disparo</span>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={testNumber}
-                        onChange={(e) => setTestNumber(e.target.value)}
-                        placeholder="(11) 98112-9900"
-                        className="flex-1 px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl"
-                      />
+                    <div className="pt-2 flex justify-center gap-2">
                       <button
                         type="button"
-                        onClick={handleSendTestMessage}
-                        disabled={testStatus === 'sending'}
-                        className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 shrink-0"
+                        onClick={() => handleDisconnectWhatsApp(whatsappSyncMember)}
+                        className="px-4 py-2 rounded-xl text-xs font-bold bg-white border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
                       >
-                        {testStatus === 'sending' ? (
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                        ) : testStatus === 'sent' ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                        ) : (
-                          <Send className="w-3.5 h-3.5" />
-                        )}
-                        <span>{testStatus === 'sent' ? 'Enviado!' : 'Testar API'}</span>
+                        Desconectar Sessão
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => startConnectFlow(whatsappSyncMember)}
+                        className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors"
+                      >
+                        Reconectar
                       </button>
                     </div>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <>
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-extrabold text-slate-900">
+                        Abra o WhatsApp no aparelho de {whatsappSyncMember.name}
+                      </h4>
+                      <p className="text-xs text-slate-500">
+                        Escaneie o QR Code abaixo para sincronizar a conta do vendedor com o CRM
+                      </p>
+                    </div>
+
+                    {/* QR Code Container */}
+                    <div className="relative inline-block p-4 bg-white rounded-3xl border-2 border-emerald-500/40 shadow-xl mx-auto">
+                      <div className="relative w-52 h-52 bg-slate-950 rounded-2xl flex items-center justify-center overflow-hidden">
+                        {connectStatus === 'loading' && (
+                          <RefreshCw className="w-8 h-8 text-emerald-500 animate-spin" />
+                        )}
+                        {connectStatus === 'error' && (
+                          <p className="text-xs text-red-400 p-4 text-center">{connectError}</p>
+                        )}
+                        {connectStatus === 'waiting' && qrCode && (
+                          <img src={qrCode} alt="QR Code do WhatsApp" className="w-full h-full object-contain" />
+                        )}
+                      </div>
+
+                      {connectStatus === 'waiting' && (
+                        <div className="mt-2 text-[11px] font-bold text-slate-500 flex items-center justify-center gap-1.5">
+                          <RefreshCw className="w-3.5 h-3.5 text-emerald-600 animate-spin" />
+                          <span>Aguardando leitura...</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Instructions */}
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-left text-xs space-y-1.5 text-slate-700">
+                      <span className="font-bold text-slate-900 block mb-1">Como conectar:</span>
+                      <p>1. No celular do vendedor, abra o aplicativo <strong>WhatsApp</strong>.</p>
+                      <p>2. Toque em <strong>Configurações</strong> ou nos <strong>três pontinhos</strong> no topo.</p>
+                      <p>3. Selecione <strong>Aparelhos Conectados</strong> e toque em <strong>Conectar um Aparelho</strong>.</p>
+                      <p>4. Aponte a câmera para este QR Code.</p>
+                    </div>
+
+                    {/* Manual QR refresh (the Evolution QR expires after ~60s) */}
+                    <div className="pt-2">
+                      <button
+                        id="refresh-qr-btn"
+                        type="button"
+                        disabled={connectStatus === 'loading'}
+                        onClick={() => startConnectFlow(whatsappSyncMember)}
+                        className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                      >
+                        <RefreshCw className={`w-4 h-4 ${connectStatus === 'loading' ? 'animate-spin' : ''}`} />
+                        <span>Gerar Novo QR Code</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Modal Footer */}
