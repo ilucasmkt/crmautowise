@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MessageSquare, Send, RefreshCw, User, AlertCircle, ImagePlus, FileAudio } from 'lucide-react';
+import { MessageSquare, Send, RefreshCw, User, AlertCircle, ImagePlus, FileAudio, Mic, Trash2, Check } from 'lucide-react';
 import {
   getWhatsAppChats,
   getWhatsAppMessages,
@@ -45,6 +45,19 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
   const imageInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
+
+  const [recording, setRecording] = useState(false);
+  const [recordSeconds, setRecordSeconds] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const recordTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (recordTimerRef.current) clearInterval(recordTimerRef.current);
+      mediaRecorderRef.current?.stream.getTracks().forEach((track) => track.stop());
+    };
+  }, []);
 
   const insertEmoji = (emoji: string) => {
     const input = textInputRef.current;
@@ -137,6 +150,73 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
     } finally {
       setSending(false);
     }
+  };
+
+  const startRecording = async () => {
+    setSendError('');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
+        ? 'audio/ogg;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : '';
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      chunksRef.current = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setRecording(true);
+      setRecordSeconds(0);
+      recordTimerRef.current = window.setInterval(() => setRecordSeconds((s) => s + 1), 1000);
+    } catch {
+      setSendError('Não foi possível acessar o microfone. Verifique as permissões do navegador.');
+    }
+  };
+
+  const stopRecording = (shouldSend: boolean) => {
+    const recorder = mediaRecorderRef.current;
+    if (!recorder) return;
+    if (recordTimerRef.current) {
+      clearInterval(recordTimerRef.current);
+      recordTimerRef.current = null;
+    }
+    const chat = selectedChat;
+    recorder.onstop = async () => {
+      recorder.stream.getTracks().forEach((track) => track.stop());
+      setRecording(false);
+      if (!shouldSend || chunksRef.current.length === 0 || !chat) return;
+      const mimetype = recorder.mimeType || 'audio/webm';
+      const blob = new Blob(chunksRef.current, { type: mimetype });
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      setSending(true);
+      setSendError('');
+      try {
+        await sendWhatsAppMedia(teamMemberId, chat.sendTo, 'audio', base64, mimetype);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `local-${Date.now()}`,
+            fromMe: true,
+            type: 'audio',
+            timestamp: Date.now() / 1000,
+            localDataUri: `data:${mimetype};base64,${base64}`,
+          },
+        ]);
+      } catch (err) {
+        setSendError(err instanceof Error ? err.message : 'Erro ao enviar o áudio gravado');
+      } finally {
+        setSending(false);
+      }
+    };
+    recorder.stop();
   };
 
   if (chatsStatus === 'error') {
@@ -286,64 +366,105 @@ export const ConversasView: React.FC<ConversasViewProps> = ({ teamMemberId }) =>
               {sendError && (
                 <p className="px-3 py-2 text-xs text-red-600 bg-red-50 border-t border-red-100">{sendError}</p>
               )}
-              <form onSubmit={handleSend} className="p-3 border-t border-slate-200 flex items-center gap-2">
-                <input
-                  ref={imageInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleAttachFile(file, 'image');
-                    e.target.value = '';
-                  }}
-                />
-                <input
-                  ref={audioInputRef}
-                  type="file"
-                  accept="audio/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleAttachFile(file, 'audio');
-                    e.target.value = '';
-                  }}
-                />
-                <button
-                  type="button"
-                  disabled={sending}
-                  onClick={() => imageInputRef.current?.click()}
-                  title="Anexar imagem"
-                  className="p-2.5 rounded-xl text-slate-500 hover:text-brand-600 hover:bg-brand-50 disabled:opacity-50 transition-colors shrink-0"
-                >
-                  <ImagePlus className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  disabled={sending}
-                  onClick={() => audioInputRef.current?.click()}
-                  title="Anexar arquivo de áudio"
-                  className="p-2.5 rounded-xl text-slate-500 hover:text-brand-600 hover:bg-brand-50 disabled:opacity-50 transition-colors shrink-0"
-                >
-                  <FileAudio className="w-4 h-4" />
-                </button>
-                <EmojiPicker onSelect={insertEmoji} />
-                <input
-                  ref={textInputRef}
-                  type="text"
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  placeholder="Digite uma mensagem..."
-                  className="flex-1 px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
-                />
-                <button
-                  type="submit"
-                  disabled={!draft.trim() || sending}
-                  className="p-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-50 transition-colors shrink-0"
-                >
-                  {sending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                </button>
-              </form>
+              {recording ? (
+                <div className="p-3 border-t border-slate-200 flex items-center gap-3">
+                  <span className="relative flex h-2.5 w-2.5 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+                  </span>
+                  <span className="flex-1 text-sm font-semibold text-slate-700">
+                    Gravando áudio... {String(Math.floor(recordSeconds / 60)).padStart(2, '0')}:
+                    {String(recordSeconds % 60).padStart(2, '0')}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => stopRecording(false)}
+                    title="Cancelar gravação"
+                    className="p-2.5 rounded-xl text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => stopRecording(true)}
+                    title="Enviar áudio"
+                    className="p-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white transition-colors shrink-0"
+                  >
+                    <Check className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleSend} className="p-3 border-t border-slate-200 flex items-center gap-2">
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleAttachFile(file, 'image');
+                      e.target.value = '';
+                    }}
+                  />
+                  <input
+                    ref={audioInputRef}
+                    type="file"
+                    accept="audio/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleAttachFile(file, 'audio');
+                      e.target.value = '';
+                    }}
+                  />
+                  <button
+                    type="button"
+                    disabled={sending}
+                    onClick={() => imageInputRef.current?.click()}
+                    title="Anexar imagem"
+                    className="p-2.5 rounded-xl text-slate-500 hover:text-brand-600 hover:bg-brand-50 disabled:opacity-50 transition-colors shrink-0"
+                  >
+                    <ImagePlus className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={sending}
+                    onClick={() => audioInputRef.current?.click()}
+                    title="Anexar arquivo de áudio"
+                    className="p-2.5 rounded-xl text-slate-500 hover:text-brand-600 hover:bg-brand-50 disabled:opacity-50 transition-colors shrink-0"
+                  >
+                    <FileAudio className="w-4 h-4" />
+                  </button>
+                  <EmojiPicker onSelect={insertEmoji} />
+                  <input
+                    ref={textInputRef}
+                    type="text"
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    placeholder="Digite uma mensagem..."
+                    className="flex-1 px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                  />
+                  {draft.trim() ? (
+                    <button
+                      type="submit"
+                      disabled={sending}
+                      className="p-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-50 transition-colors shrink-0"
+                    >
+                      {sending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={sending}
+                      onClick={startRecording}
+                      title="Gravar áudio"
+                      className="p-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-50 transition-colors shrink-0"
+                    >
+                      <Mic className="w-4 h-4" />
+                    </button>
+                  )}
+                </form>
+              )}
             </>
           )}
         </div>
