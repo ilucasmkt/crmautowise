@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
-import { 
-  Kanban, 
-  Plus, 
-  ArrowRight, 
-  ArrowLeft, 
-  MessageSquare, 
-  Car, 
-  Flame, 
-  User, 
-  CheckCircle2, 
-  AlertCircle, 
-  Clock, 
+import {
+  Kanban,
+  Plus,
+  MessageSquare,
+  Car,
+  Flame,
+  User,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
   Trophy,
   XCircle,
   PhoneOff,
@@ -134,26 +132,6 @@ export const KanbanView: React.FC<KanbanViewProps> = ({
   const displayedColumns = showClosedColumnsInBoard 
     ? [...activeColumns, ...closedColumns] 
     : activeColumns;
-
-  const stageOrder: LeadStage[] = [
-    'novo', 
-    'contato', 
-    'sem_resposta', 
-    'agendamento', 
-    'proposta', 
-    'negociacao', 
-    'ganho', 
-    'perdido'
-  ];
-
-  const handleMoveStage = (lead: Lead, direction: 'prev' | 'next') => {
-    const currentIndex = stageOrder.indexOf(lead.stage);
-    if (direction === 'next' && currentIndex < stageOrder.length - 1) {
-      onUpdateLeadStage(lead.id, stageOrder[currentIndex + 1]);
-    } else if (direction === 'prev' && currentIndex > 0) {
-      onUpdateLeadStage(lead.id, stageOrder[currentIndex - 1]);
-    }
-  };
 
   const filteredLeads = leads.filter(l => {
     if (selectedSeller === 'todos') return true;
@@ -544,7 +522,7 @@ export const KanbanView: React.FC<KanbanViewProps> = ({
                             draggable
                             onDragStart={(e) => handleDragStart(e, lead.id)}
                             onDragEnd={handleDragEnd}
-                            className={`bg-white rounded-xl border border-slate-200 shadow-2xs hover:shadow-md transition-all p-3.5 cursor-grab active:cursor-grabbing group relative ${
+                            className={`bg-white rounded-xl border-2 border-blue-300 shadow-2xs hover:shadow-md hover:border-blue-400 transition-all p-3.5 cursor-grab active:cursor-grabbing group relative ${
                               draggedLeadId === lead.id ? 'opacity-40 border-brand-400 scale-95 ring-2 ring-brand-400/30' : ''
                             }`}
                           >
@@ -598,7 +576,7 @@ export const KanbanView: React.FC<KanbanViewProps> = ({
                             {/* Card Footer */}
                             <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
                               <div className="flex items-center gap-1.5">
-                                <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600">
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-400 text-white">
                                   {lead.source}
                                 </span>
                                 <span className="text-[10px] text-slate-400">
@@ -607,26 +585,6 @@ export const KanbanView: React.FC<KanbanViewProps> = ({
                               </div>
 
                               <div className="flex items-center gap-1">
-                                {/* Botão Rápido Ganho */}
-                                <button
-                                  type="button"
-                                  onClick={() => onUpdateLeadStage(lead.id, 'ganho')}
-                                  title="Marcar como Ganho (Vendido)"
-                                  className="p-1 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
-                                >
-                                  <Trophy className="w-3.5 h-3.5" />
-                                </button>
-
-                                {/* Botão Rápido Perdido */}
-                                <button
-                                  type="button"
-                                  onClick={() => onUpdateLeadStage(lead.id, 'perdido')}
-                                  title="Marcar como Perca (Perdido)"
-                                  className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
-                                >
-                                  <XCircle className="w-3.5 h-3.5" />
-                                </button>
-
                                 {/* Open conversation in Conversas */}
                                 <button
                                   type="button"
@@ -645,26 +603,6 @@ export const KanbanView: React.FC<KanbanViewProps> = ({
                                   title="Editar Lead"
                                 >
                                   <Edit3 className="w-3.5 h-3.5" />
-                                </button>
-
-                                {/* Move Left */}
-                                <button
-                                  onClick={() => handleMoveStage(lead, 'prev')}
-                                  disabled={col.id === 'novo'}
-                                  title="Voltar Etapa"
-                                  className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30 rounded hover:bg-slate-100"
-                                >
-                                  <ArrowLeft className="w-3.5 h-3.5" />
-                                </button>
-
-                                {/* Move Right */}
-                                <button
-                                  onClick={() => handleMoveStage(lead, 'next')}
-                                  disabled={col.id === 'ganho'}
-                                  title="Avançar Etapa"
-                                  className="p-1 text-brand-600 hover:bg-brand-50 rounded font-bold"
-                                >
-                                  <ArrowRight className="w-3.5 h-3.5" />
                                 </button>
                               </div>
                             </div>
