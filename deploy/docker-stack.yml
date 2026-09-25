@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+  app:
+    image: crmautowise:latest
+    networks:
+      - adminautowise
+    environment:
+      PORT: "3000"
+      SUPABASE_URL: "${SUPABASE_URL}"
+      SUPABASE_SERVICE_ROLE_KEY: "${SUPABASE_SERVICE_ROLE_KEY}"
+      EVOLUTION_API_URL: "${EVOLUTION_API_URL}"
+      EVOLUTION_API_KEY: "${EVOLUTION_API_KEY}"
+      FIPE_API_TOKEN: "${FIPE_API_TOKEN}"
+    deploy:
+      replicas: 1
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.crmautowise.rule=Host(`autowisebrasil.com.br`) || Host(`www.autowisebrasil.com.br`)"
+        - "traefik.http.routers.crmautowise.entrypoints=websecure"
+        - "traefik.http.routers.crmautowise.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.crmautowise.loadbalancer.server.port=3000"
+
+networks:
+  adminautowise:
+    external: true

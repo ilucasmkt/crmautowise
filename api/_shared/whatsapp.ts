@@ -4,6 +4,13 @@ export function instanceNameFor(storeId: string, teamMemberId: string): string {
   return `crm_${storeId}_${teamMemberId}`.replace(/[^a-zA-Z0-9_-]/g, '');
 }
 
+export function parseInstanceName(instanceName: string): { storeId: string; teamMemberId: string } | null {
+  const parts = instanceName.split('_');
+  if (parts.length !== 3 || parts[0] !== 'crm') return null;
+  const [, storeId, teamMemberId] = parts;
+  return { storeId, teamMemberId };
+}
+
 export function extractBearerToken(authHeader: string | string[] | undefined): string | null {
   return typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
     ? authHeader.slice(7)

@@ -55,6 +55,8 @@ export function useLeads(storeId: string) {
 
   useEffect(() => {
     reload();
+    const interval = setInterval(reload, 60000);
+    return () => clearInterval(interval);
   }, [reload]);
 
   const addLead = useCallback(

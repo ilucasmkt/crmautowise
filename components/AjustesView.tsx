@@ -23,17 +23,21 @@ import {
   Eye,
   RefreshCw
 } from 'lucide-react';
-import { StoreSettings, WorkingDayHours } from '../types';
+import { StoreSettings, WorkingDayHours, TeamMember } from '../types';
 
 interface AjustesViewProps {
   settings: StoreSettings;
   onSaveSettings: (newSettings: StoreSettings) => void;
+  team: TeamMember[];
+  onUpdateMember: (member: TeamMember) => void;
   readOnly?: boolean;
 }
 
 export const AjustesView: React.FC<AjustesViewProps> = ({
   settings,
   onSaveSettings,
+  team,
+  onUpdateMember,
   readOnly = false,
 }) => {
   const [activeTab, setActiveTab] = useState<'perfil' | 'horarios' | 'meta'>('perfil');
@@ -625,6 +629,7 @@ fbq('track', 'PageView');
 
       {/* Tab 3: Integração Meta Pixel */}
       {activeTab === 'meta' && (
+        <>
         <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs space-y-6">
         <fieldset disabled={readOnly} className="contents">
           <div className="border-b border-slate-100 pb-4">
@@ -764,6 +769,43 @@ fbq('track', 'PageView');
           </div>
         </fieldset>
         </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs space-y-4">
+        <fieldset disabled={readOnly} className="contents">
+          <div className="border-b border-slate-100 pb-4">
+            <h2 className="text-base font-bold text-slate-900">Rodízio de Leads de Anúncio</h2>
+            <p className="text-xs text-slate-500">
+              Quando um lead chegar automaticamente via anúncio "Clique para WhatsApp", o responsável roda entre os vendedores marcados abaixo, um de cada vez.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            {team.length === 0 ? (
+              <p className="text-xs text-slate-400">Nenhum vendedor cadastrado ainda.</p>
+            ) : (
+              team.map((member) => (
+                <div
+                  key={member.id}
+                  id={`rotation-toggle-${member.id}`}
+                  className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between"
+                >
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 block">{member.name}</span>
+                    <span className="text-[11px] text-slate-500">{member.role}</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={member.inLeadRotation}
+                    onChange={(e) => onUpdateMember({ ...member, inLeadRotation: e.target.checked })}
+                    className="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500"
+                  />
+                </div>
+              ))
+            )}
+          </div>
+        </fieldset>
+        </div>
+        </>
       )}
     </div>
   );
