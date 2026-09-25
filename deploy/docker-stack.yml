@@ -16,7 +16,7 @@ services:
       replicas: 1
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.crmautowise.rule=Host(`${CRM_HOST}`)"
+        - "traefik.http.routers.crmautowise.rule=Host(`autowisebrasil.com.br`) || Host(`www.autowisebrasil.com.br`)"
         - "traefik.http.routers.crmautowise.entrypoints=websecure"
         - "traefik.http.routers.crmautowise.tls.certresolver=letsencryptresolver"
         - "traefik.http.services.crmautowise.loadbalancer.server.port=3000"
