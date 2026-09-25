@@ -348,6 +348,8 @@ const AuthenticatedApp: React.FC<{ profile: Profile }> = ({ profile }) => {
             <AjustesView
               settings={settings}
               onSaveSettings={handleSaveSettings}
+              team={team}
+              onUpdateMember={handleUpdateTeamMember}
               readOnly={!canEditStoreSettings(profile.role)}
             />
           )}
