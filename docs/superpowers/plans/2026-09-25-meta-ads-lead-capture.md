@@ -894,7 +894,9 @@ openssl rand -hex 16
 
 Copiar o conteúdo de `supabase/migrations/0004_ad_lead_rotation.sql` e colar no **SQL Editor** do painel do Supabase (dashboard do projeto → SQL Editor → New query → Run).
 
-- [ ] **Step 3: Adicionar o segredo no `stack.env` da VPS e redeploy**
+- [ ] **Step 3: Adicionar o segredo no `stack.env` e no `docker-stack.yml`, e redeploy**
+
+`stack.env` sozinho não basta — o `environment:` do `docker-stack.yml` só repassa pro container as variáveis que ele lista explicitamente. Adicionar a linha `WHATSAPP_WEBHOOK_SECRET: "${WHATSAPP_WEBHOOK_SECRET}"` no bloco `environment:` de `deploy/docker-stack.yml` (commitado no repositório, ao lado das outras), e só então:
 
 ```bash
 ssh -p 22022 -i ~/.ssh/crmautowise_vps root@129.121.36.63
@@ -902,6 +904,14 @@ echo 'WHATSAPP_WEBHOOK_SECRET=<valor gerado no Step 1>' >> /root/apps/crmautowis
 cd /root/apps/crmautowise/deploy
 export $(grep -v '^#' stack.env | xargs) && docker stack deploy -c docker-stack.yml crmautowise
 ```
+
+Confirmar que chegou no container antes de seguir:
+
+```bash
+docker exec $(docker ps -q -f name=crmautowise_app) sh -c 'echo $WHATSAPP_WEBHOOK_SECRET'
+```
+
+Expected: imprime o valor gerado no Step 1 (não vazio)
 
 - [ ] **Step 4: Registrar o webhook na instância que já existe (Avenida Motors)**
 
