@@ -12,6 +12,7 @@ services:
       EVOLUTION_API_URL: "${EVOLUTION_API_URL}"
       EVOLUTION_API_KEY: "${EVOLUTION_API_KEY}"
       FIPE_API_TOKEN: "${FIPE_API_TOKEN}"
+      WHATSAPP_WEBHOOK_SECRET: "${WHATSAPP_WEBHOOK_SECRET}"
     deploy:
       replicas: 1
       labels:
