@@ -18,15 +18,17 @@ import {
   Eye,
   Edit3
 } from 'lucide-react';
-import { Lead, LeadStage, TeamMember } from '../types';
+import { Lead, LeadStage, TeamMember, Vehicle } from '../types';
 import { formatCurrency } from '../lib/format';
+import { LeadModal } from './LeadModal';
 
 interface KanbanViewProps {
   leads: Lead[];
+  vehicles: Vehicle[];
   team: TeamMember[];
   onUpdateLeadStage: (leadId: string, newStage: LeadStage) => void;
+  onUpdateLead: (lead: Lead) => void;
   onOpenNewLeadModal: (stage?: LeadStage) => void;
-  onSelectLead: (lead: Lead) => void;
   onOpenConversa: (phone: string) => void;
 }
 
@@ -41,15 +43,17 @@ interface ColumnConfig {
 
 export const KanbanView: React.FC<KanbanViewProps> = ({
   leads,
+  vehicles,
   team,
   onUpdateLeadStage,
+  onUpdateLead,
   onOpenNewLeadModal,
-  onSelectLead,
   onOpenConversa,
 }) => {
   const [selectedSeller, setSelectedSeller] = useState<string>('todos');
   const [viewMode, setViewMode] = useState<'funil' | 'ganhos' | 'perdidos'>('funil');
   const [showClosedColumnsInBoard, setShowClosedColumnsInBoard] = useState<boolean>(false);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
   // Drag-and-drop state
   const [isDragging, setIsDragging] = useState<boolean>(false);
@@ -522,7 +526,8 @@ export const KanbanView: React.FC<KanbanViewProps> = ({
                             draggable
                             onDragStart={(e) => handleDragStart(e, lead.id)}
                             onDragEnd={handleDragEnd}
-                            className={`bg-white rounded-xl border-2 border-blue-300 shadow-2xs hover:shadow-md hover:border-blue-400 transition-all p-3.5 cursor-grab active:cursor-grabbing group relative ${
+                            onClick={() => setSelectedLead(lead)}
+                            className={`bg-white rounded-xl border-2 border-blue-300 shadow-2xs hover:shadow-md hover:border-blue-400 transition-all p-3.5 cursor-pointer group relative ${
                               draggedLeadId === lead.id ? 'opacity-40 border-brand-400 scale-95 ring-2 ring-brand-400/30' : ''
                             }`}
                           >
@@ -531,7 +536,10 @@ export const KanbanView: React.FC<KanbanViewProps> = ({
                               <div>
                                 <button
                                   type="button"
-                                  onClick={() => onSelectLead(lead)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedLead(lead);
+                                  }}
                                   className="font-bold text-slate-900 text-sm hover:text-brand-600 transition-colors text-left"
                                 >
                                   {lead.name}
@@ -588,7 +596,10 @@ export const KanbanView: React.FC<KanbanViewProps> = ({
                                 {/* Open conversation in Conversas */}
                                 <button
                                   type="button"
-                                  onClick={() => onOpenConversa(lead.phone)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onOpenConversa(lead.phone);
+                                  }}
                                   className="p-1 text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
                                   title="Abrir conversa no CRM"
                                 >
@@ -598,7 +609,10 @@ export const KanbanView: React.FC<KanbanViewProps> = ({
                                 {/* Edit Lead */}
                                 <button
                                   type="button"
-                                  onClick={() => onSelectLead(lead)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedLead(lead);
+                                  }}
                                   className="p-1 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded transition-colors"
                                   title="Editar Lead"
                                 >
@@ -756,6 +770,25 @@ export const KanbanView: React.FC<KanbanViewProps> = ({
             </div>
           )}
         </div>
+      )}
+
+      {selectedLead && (
+        <LeadModal
+          key={selectedLead.id}
+          lead={selectedLead}
+          vehicles={vehicles}
+          team={team}
+          onSave={(payload) => {
+            onUpdateLead({
+              ...payload,
+              id: selectedLead.id,
+              createdAt: selectedLead.createdAt,
+              lastContactAt: new Date().toISOString(),
+            });
+            setSelectedLead(null);
+          }}
+          onClose={() => setSelectedLead(null)}
+        />
       )}
     </div>
   );

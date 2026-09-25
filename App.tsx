@@ -47,7 +47,6 @@ const AuthenticatedApp: React.FC<{ profile: Profile }> = ({ profile }) => {
   const { signOut } = useAuth();
   const [activeSection, setActiveSection] = useState<NavSection>('inicio');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [pendingEditLeadId, setPendingEditLeadId] = useState<string | null>(null);
   const [pendingConversaPhone, setPendingConversaPhone] = useState<string | null>(null);
 
   const { vehicles, loading: vehiclesLoading, addVehicle, updateVehicle, deleteVehicle } =
@@ -290,16 +289,16 @@ const AuthenticatedApp: React.FC<{ profile: Profile }> = ({ profile }) => {
               onAddLead={handleAddLead}
               onUpdateLead={handleUpdateLead}
               onDeleteLead={handleDeleteLead}
-              editLeadId={pendingEditLeadId}
-              onEditLeadHandled={() => setPendingEditLeadId(null)}
             />
           )}
 
           {activeSection === 'crm' && (
             <KanbanView
               leads={leads}
+              vehicles={vehicles}
               team={team}
               onUpdateLeadStage={handleUpdateLeadStage}
+              onUpdateLead={handleUpdateLead}
               onOpenNewLeadModal={(stage) => {
                 setActiveSection('leads');
                 setTimeout(() => {
@@ -310,10 +309,6 @@ const AuthenticatedApp: React.FC<{ profile: Profile }> = ({ profile }) => {
               onOpenConversa={(phone) => {
                 setPendingConversaPhone(phone);
                 setActiveSection('conversas');
-              }}
-              onSelectLead={(lead) => {
-                setPendingEditLeadId(lead.id);
-                setActiveSection('leads');
               }}
             />
           )}
