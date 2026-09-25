@@ -11,6 +11,7 @@ import whatsappMessagesHandler from './routes/whatsapp/messages.js';
 import whatsappSendHandler from './routes/whatsapp/send.js';
 import whatsappSendMediaHandler from './routes/whatsapp/sendMedia.js';
 import whatsappMediaHandler from './routes/whatsapp/media.js';
+import whatsappWebhookHandler from './routes/whatsapp/webhook.js';
 import { asyncHandler } from './asyncHandler.js';
 
 export function createApp(): Express {
@@ -36,6 +37,7 @@ export function createApp(): Express {
   app.post('/api/whatsapp/send', asyncHandler(whatsappSendHandler));
   app.post('/api/whatsapp/sendMedia', asyncHandler(whatsappSendMediaHandler));
   app.get('/api/whatsapp/media', asyncHandler(whatsappMediaHandler));
+  app.post('/api/whatsapp/webhook/:secret', asyncHandler(whatsappWebhookHandler));
 
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const distDir = path.resolve(__dirname, '..', 'dist');
