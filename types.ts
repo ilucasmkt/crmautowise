@@ -90,6 +90,7 @@ export interface TeamMember {
   whatsappSessionId?: string;
   whatsappBattery?: number;
   whatsappConnectedAt?: string;
+  inLeadRotation: boolean;
 }
 
 export interface WorkingDayHours {

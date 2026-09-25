@@ -201,6 +201,7 @@ export const EquipeView: React.FC<EquipeViewProps> = ({
         targetSales: Number(targetSales) || 10,
         avatarColor: randomColor,
         whatsappStatus: 'desconectado',
+        inLeadRotation: true,
       });
     }
 

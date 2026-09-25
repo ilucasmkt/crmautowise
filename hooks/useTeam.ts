@@ -19,6 +19,7 @@ interface TeamRow {
   whatsapp_session_id: string | null;
   whatsapp_battery: number | null;
   whatsapp_connected_at: string | null;
+  in_lead_rotation: boolean;
 }
 
 function fromRow(row: TeamRow): TeamMember {
@@ -39,6 +40,7 @@ function fromRow(row: TeamRow): TeamMember {
     whatsappSessionId: row.whatsapp_session_id ?? undefined,
     whatsappBattery: row.whatsapp_battery ?? undefined,
     whatsappConnectedAt: row.whatsapp_connected_at ?? undefined,
+    inLeadRotation: row.in_lead_rotation,
   };
 }
 
@@ -91,6 +93,7 @@ export function useTeam(storeId: string) {
         role: updated.role,
         status: updated.status,
         target_sales: updated.targetSales,
+        in_lead_rotation: updated.inLeadRotation,
       })
       .eq('id', updated.id);
     if (!error) setTeam((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
