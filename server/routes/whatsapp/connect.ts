@@ -2,6 +2,30 @@ import type { Request as ExpressRequest, Response as ExpressResponse } from 'exp
 import { createClient } from '@supabase/supabase-js';
 import { extractBearerToken, authorizeTeamMemberAccess, AuthorizationError } from '../../../api/_shared/whatsapp.js';
 
+async function registerWebhook(evolutionUrl: string, evolutionKey: string, instanceName: string): Promise<void> {
+  const webhookSecret = process.env.WHATSAPP_WEBHOOK_SECRET;
+  if (!webhookSecret) return;
+
+  try {
+    // Endereço interno do Swarm — mais rápido e não depende de internet
+    // pública entre a Evolution API e o CRM, já que os dois containers
+    // estão na mesma rede.
+    await fetch(`${evolutionUrl}/webhook/set/${instanceName}`, {
+      method: 'POST',
+      headers: { apikey: evolutionKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        webhook: {
+          enabled: true,
+          url: `http://crmautowise_app:3000/api/whatsapp/webhook/${webhookSecret}`,
+          events: ['MESSAGES_UPSERT'],
+        },
+      }),
+    });
+  } catch (err) {
+    console.error('Erro ao configurar webhook da Evolution API:', err);
+  }
+}
+
 export default async function handler(req: ExpressRequest, res: ExpressResponse) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
@@ -73,6 +97,7 @@ export default async function handler(req: ExpressRequest, res: ExpressResponse)
       res.status(502).json({ error: 'Não foi possível gerar o QR Code' });
       return;
     }
+    await registerWebhook(evolutionUrl, evolutionKey, instanceName);
     res.status(200).json({ qrCodeBase64: connectBody.base64, instanceName });
     return;
   }
@@ -82,5 +107,6 @@ export default async function handler(req: ExpressRequest, res: ExpressResponse)
     res.status(502).json({ error: 'Não foi possível gerar o QR Code' });
     return;
   }
+  await registerWebhook(evolutionUrl, evolutionKey, instanceName);
   res.status(200).json({ qrCodeBase64: createBody.qrcode.base64, instanceName });
 }
